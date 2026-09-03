@@ -12,7 +12,7 @@
     <!-- Navbar -->
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark sticky-top">
         <div class="container">
-            <a class="navbar-brand fw-bold" href="index.html">PROSTOCK</a>
+            <a class="navbar-brand" href="index.html"><img src="img/logo-prostock.svg" class="brand-logo" alt="Prostock"></a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
             </button>
@@ -35,19 +35,37 @@
         </div>
     </nav>
 
+    <div class="home-notice">
+        <div class="container d-flex flex-wrap justify-content-center gap-4 gap-md-5">
+            <span><i class="bi bi-truck"></i> Despachos rápidos</span>
+            <span><i class="bi bi-box-seam"></i> Stock actualizado</span>
+            <span><i class="bi bi-shield-check"></i> Compra segura</span>
+        </div>
+    </div>
+
     <!-- Hero Banner -->
-    <header class="bg-primary text-white text-center py-5 mb-5 shadow-sm">
-        <div class="container py-3">
-            <h1 class="display-4 fw-bold">Soluciones Integrales para tu Oficina</h1>
-            <p class="lead">Insumos, papelería y productos escolares de la mejor calidad a un clic.</p>
-            <a href="productos.html" class="btn btn-light btn-lg font-semibold mt-2">Ver Catálogo Completo</a>
+    <header class="home-hero mb-5">
+        <div class="container">
+            <div class="home-hero-content">
+                <p class="home-hero-kicker">PROSTOCK / TIENDA ONLINE</p>
+                <h1>Todo para tu oficina, en un solo lugar.</h1>
+                <p class="home-hero-copy">Encuentra papelería, artículos escolares e insumos para mantener tu día en movimiento.</p>
+                <a href="productos.html" class="btn btn-warning btn-lg fw-bold mt-3">Comprar ahora <i class="bi bi-arrow-right ms-2"></i></a>
+            </div>
         </div>
     </header>
+
+    <section class="container home-categories mb-5" aria-label="Productos por categorías">
+        <p class="text-primary text-uppercase small fw-bold mb-2 text-center">Compra por categoría</p>
+        <h2 class="home-category-title">Productos por categorías</h2>
+        <p class="home-category-intro">Encuentra todo lo que necesitas para tu oficina, colegio y empresa.</p>
+        <div id="home-category-tabs" class="home-category-tabs" role="tablist" aria-label="Categorías de productos"></div>
+    </section>
 
     <!-- Catálogo de Productos Destacados -->
     <main class="container my-4">
         <div class="d-flex justify-content-between align-items-center mb-4 border-bottom pb-2">
-            <h2>Productos Destacados</h2>
+            <h2>Productos destacados</h2>
             <div class="w-25">
                 <input type="text" id="input-buscar" class="form-control" placeholder="Buscar por nombre o código...">
             </div>
@@ -57,6 +75,22 @@
             <!-- Renderizado dinámico desde js/main.js -->
         </div>
     </main>
+
+    <section class="sponsored-section mb-5" aria-label="Productos patrocinados">
+        <div class="container">
+            <div class="sponsored-heading">
+                <div>
+                    <p class="text-primary text-uppercase small fw-bold mb-1">Recomendados para ti</p>
+                    <h2 class="h3 mb-0">Productos patrocinados</h2>
+                </div>
+                <div class="sponsored-controls">
+                    <button type="button" id="sponsored-prev" class="sponsored-arrow" aria-label="Productos anteriores"><i class="bi bi-chevron-left"></i></button>
+                    <button type="button" id="sponsored-next" class="sponsored-arrow" aria-label="Productos siguientes"><i class="bi bi-chevron-right"></i></button>
+                </div>
+            </div>
+            <div id="sponsored-container" class="sponsored-track"></div>
+        </div>
+    </section>
 
     <!-- Footer -->
     <footer class="bg-dark text-white text-center py-4 mt-auto">

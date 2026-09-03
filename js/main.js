@@ -31,7 +31,52 @@ async function cargarProductos() {
     }
 
     renderizarCatalogo(productosGlobales);
+    renderizarPatrocinados(productosGlobales.slice(0, 8));
+    configurarCategoriasInicio();
     configurarFiltrosYBuscador();
+}
+
+function configurarCategoriasInicio() {
+    const tabs = document.getElementById('home-category-tabs');
+    if (!tabs) return;
+
+    const categorias = [...new Set(productosGlobales.map(producto => producto.categoria))];
+    const mostrarCategoria = categoria => {
+        renderizarCatalogo(productosGlobales.filter(producto => producto.categoria === categoria));
+        tabs.querySelectorAll('button').forEach(tab => tab.classList.toggle('active', tab.dataset.category === categoria));
+    };
+
+    tabs.innerHTML = categorias.map((categoria, indice) => `
+        <button type="button" class="home-category-tab${indice === 0 ? ' active' : ''}" data-category="${categoria}" role="tab" aria-selected="${indice === 0}">${categoria}</button>
+    `).join('');
+    tabs.addEventListener('click', evento => {
+        const tab = evento.target.closest('button');
+        if (tab) mostrarCategoria(tab.dataset.category);
+    });
+    mostrarCategoria(categorias[0]);
+}
+
+function renderizarPatrocinados(lista) {
+    const container = document.getElementById('sponsored-container');
+    if (!container) return;
+
+    container.innerHTML = lista.map(producto => `
+        <article class="sponsored-card">
+            <a href="detalle-producto.html?id=${producto.id}" class="sponsored-image-link">
+                <img src="${producto.imagen}" alt="${producto.nombre}">
+            </a>
+            <div class="sponsored-card-body">
+                <span class="sponsored-category">${producto.categoria}</span>
+                <h3><a href="detalle-producto.html?id=${producto.id}">${producto.nombre}</a></h3>
+                <strong>$${producto.precio.toLocaleString('es-CL')}</strong>
+                <span class="sponsored-provider">Prostock</span>
+            </div>
+        </article>
+    `).join('');
+
+    const desplazar = direccion => container.scrollBy({ left: direccion * 300, behavior: 'smooth' });
+    document.getElementById('sponsored-prev')?.addEventListener('click', () => desplazar(-1));
+    document.getElementById('sponsored-next')?.addEventListener('click', () => desplazar(1));
 }
 
 function renderizarCatalogo(lista) {
@@ -44,27 +89,47 @@ function renderizarCatalogo(lista) {
         return;
     }
 
-    lista.forEach(prod => {
-        const div = document.createElement('div');
-        div.className = 'col-md-4 col-lg-3 mb-4';
-        div.innerHTML = `
-            <div class="card h-100 shadow-sm border-0">
-                <img src="${prod.imagen}" class="card-img-top" alt="${prod.nombre}" style="height: 180px; object-fit: cover;">
-                <div class="card-body d-flex flex-column">
-                    <small class="text-muted fw-bold">CÓD: ${prod.codigo}</small>
-                    <h6 class="card-title fw-bold my-1">${prod.nombre}</h6>
-                    <p class="text-muted small mb-2">${prod.categoria}</p>
-                    <div class="mt-auto d-flex justify-content-between align-items-center">
-                        <span class="fs-5 fw-bold text-primary">$${prod.precio.toLocaleString('es-CL')}</span>
-                        <a href="detalle-producto.html?id=${prod.id}" class="btn btn-sm btn-outline-primary">Ver Ficha</a>
-                    </div>
-                    <button onclick="agregarAlCarrito(${prod.id})" class="btn btn-danger btn-sm w-100 mt-2">
-                        <i class="bi bi-cart-plus me-1"></i> Agregar
-                    </button>
-                </div>
+    const productosPorCategoria = lista.reduce((grupos, producto) => {
+        const categoria = producto.categoria || 'Otros';
+        if (!grupos[categoria]) grupos[categoria] = [];
+        grupos[categoria].push(producto);
+        return grupos;
+    }, {});
+
+    Object.entries(productosPorCategoria).forEach(([categoria, productos]) => {
+        const seccion = document.createElement('section');
+        seccion.className = 'product-category-section col-12';
+        seccion.innerHTML = `
+            <div class="product-category-heading">
+                <h3>${categoria}</h3>
+                <span>${productos.length} producto${productos.length === 1 ? '' : 's'}</span>
             </div>
+            <div class="row g-4 product-category-grid"></div>
         `;
-        container.appendChild(div);
+        const grid = seccion.querySelector('.product-category-grid');
+
+        productos.forEach(prod => {
+            const div = document.createElement('div');
+            div.className = 'col-sm-6 col-lg-4 col-xl-3';
+            div.innerHTML = `
+                <div class="card h-100 shadow-sm border-0">
+                    <img src="${prod.imagen}" class="card-img-top" alt="${prod.nombre}" style="height: 180px; object-fit: cover;">
+                    <div class="card-body d-flex flex-column">
+                        <small class="text-muted fw-bold">CÓD: ${prod.codigo}</small>
+                        <h6 class="card-title fw-bold my-1">${prod.nombre}</h6>
+                        <div class="mt-auto d-flex justify-content-between align-items-center">
+                            <span class="fs-5 fw-bold text-primary">$${prod.precio.toLocaleString('es-CL')}</span>
+                            <a href="detalle-producto.html?id=${prod.id}" class="btn btn-sm btn-outline-primary">Ver Ficha</a>
+                        </div>
+                        <button onclick="agregarAlCarrito(${prod.id})" class="btn btn-danger btn-sm w-100 mt-2">
+                            <i class="bi bi-cart-plus me-1"></i> Agregar
+                        </button>
+                    </div>
+                </div>
+            `;
+            grid.appendChild(div);
+        });
+        container.appendChild(seccion);
     });
 }
 

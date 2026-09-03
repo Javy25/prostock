@@ -18,6 +18,283 @@ main {
     flex: 1;
 }
 
+.brand-logo {
+    display: block;
+    height: 38px;
+    width: auto;
+}
+
+.admin-label {
+    color: #ffc107;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    margin-left: 0.25rem;
+}
+
+/* Portada */
+.home-notice {
+    background: #0754b8;
+    color: #fff;
+    font-size: 0.82rem;
+    font-weight: 600;
+    padding: 0.65rem 0;
+}
+
+.home-notice span {
+    align-items: center;
+    display: inline-flex;
+    gap: 0.45rem;
+}
+
+.home-notice i {
+    color: #ffca2c;
+    font-size: 1rem;
+}
+
+.home-hero {
+    align-items: center;
+    background: #0b3d82 url('../img/productos/PRI-105.jpg') center / cover;
+    color: #fff;
+    display: flex;
+    min-height: 465px;
+    position: relative;
+}
+
+.home-hero::before {
+    background: rgba(5, 39, 91, 0.82);
+    content: '';
+    inset: 0;
+    position: absolute;
+}
+
+.home-hero .container,
+.home-hero-content {
+    position: relative;
+    z-index: 1;
+}
+
+.home-hero-content {
+    max-width: 650px;
+    padding: 3rem 0;
+}
+
+.home-hero-kicker {
+    color: #ffca2c;
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    margin-bottom: 1rem;
+}
+
+.home-hero h1 {
+    font-size: 4rem;
+    font-weight: 800;
+    line-height: 1.05;
+    margin-bottom: 1rem;
+}
+
+.home-hero-copy {
+    color: #e5efff;
+    font-size: 1.15rem;
+    line-height: 1.6;
+    max-width: 530px;
+}
+
+.home-categories {
+    padding: 2.5rem 0 1.25rem;
+    text-align: center;
+}
+
+.home-category-title {
+    color: #171235;
+    font-size: 2.6rem;
+    font-weight: 800;
+    margin-bottom: 0.75rem;
+}
+
+.home-category-intro {
+    font-size: 1.1rem;
+    margin: 0 auto 2.5rem;
+    max-width: 620px;
+}
+
+.home-category-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.5rem;
+    justify-content: center;
+}
+
+.home-category-tab {
+    background: #fff;
+    border: 2px solid #171235;
+    border-radius: 0.7rem;
+    color: #171235;
+    font-size: 1.05rem;
+    font-weight: 700;
+    min-width: 190px;
+    padding: 1.35rem 2rem;
+}
+
+.home-category-tab:hover,
+.home-category-tab.active {
+    background: #171235;
+    color: #fff;
+}
+
+.home-category-card {
+    align-items: center;
+    background: #f3f7fc;
+    border: 1px solid #dce8f7;
+    color: #18222d;
+    display: flex;
+    gap: 0.85rem;
+    min-height: 94px;
+    padding: 1rem;
+    text-decoration: none;
+    transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+}
+
+.home-category-card:hover {
+    background: #e7f0fc;
+    border-color: #8db6e8;
+    color: #0754b8;
+    transform: translateY(-3px);
+}
+
+.home-category-card > span:nth-child(2) {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+}
+
+.home-category-card small {
+    color: #6c7785;
+    font-size: 0.78rem;
+    margin-top: 0.2rem;
+}
+
+.home-category-icon {
+    align-items: center;
+    background: #d8e8fb;
+    border-radius: 50%;
+    color: #0754b8;
+    display: flex;
+    font-size: 1.25rem;
+    height: 48px;
+    justify-content: center;
+    width: 48px;
+}
+
+.sponsored-section {
+    background: #f7f9fc;
+    border-bottom: 1px solid #e4eaf2;
+    border-top: 1px solid #e4eaf2;
+    padding: 2rem 0 2.25rem;
+}
+
+.sponsored-heading {
+    align-items: end;
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 1.25rem;
+}
+
+.sponsored-controls {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.sponsored-arrow {
+    align-items: center;
+    background: #fff;
+    border: 1px solid #cbd9eb;
+    border-radius: 50%;
+    color: #0754b8;
+    display: flex;
+    height: 38px;
+    justify-content: center;
+    width: 38px;
+}
+
+.sponsored-arrow:hover {
+    background: #0754b8;
+    color: #fff;
+}
+
+.sponsored-track {
+    display: flex;
+    gap: 1rem;
+    overflow-x: auto;
+    padding: 0.2rem 0.1rem 0.75rem;
+    scrollbar-color: #9eb9d9 transparent;
+    scrollbar-width: thin;
+}
+
+.sponsored-card {
+    background: #fff;
+    border: 1px solid #d8e0ea;
+    border-radius: 0.45rem;
+    flex: 0 0 220px;
+    min-height: 345px;
+    overflow: hidden;
+}
+
+.sponsored-image-link {
+    background: #f3f5f7;
+    display: block;
+    height: 170px;
+    overflow: hidden;
+}
+
+.sponsored-image-link img {
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.2s ease;
+    width: 100%;
+}
+
+.sponsored-card:hover img {
+    transform: scale(1.04);
+}
+
+.sponsored-card-body {
+    display: flex;
+    flex-direction: column;
+    padding: 1rem;
+}
+
+.sponsored-category {
+    color: #68788a;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.sponsored-card h3 {
+    font-size: 1rem;
+    line-height: 1.35;
+    margin: 0.45rem 0 1rem;
+    min-height: 43px;
+}
+
+.sponsored-card h3 a {
+    color: #0754b8;
+    text-decoration: none;
+}
+
+.sponsored-card-body strong {
+    color: #1b2735;
+    font-size: 1.25rem;
+}
+
+.sponsored-provider {
+    color: #566474;
+    font-size: 0.82rem;
+    margin-top: 0.35rem;
+}
+
 /* Tarjetas de productos y animaciones */
 .card {
     transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
@@ -35,6 +312,31 @@ main {
 
 .card:hover .card-img-top {
     transform: scale(1.03);
+}
+
+.product-category-section {
+    margin-bottom: 2.5rem;
+}
+
+.product-category-heading {
+    align-items: center;
+    border-bottom: 2px solid var(--primary-color);
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 1.25rem;
+    padding-bottom: 0.65rem;
+}
+
+.product-category-heading h3 {
+    color: #17395f;
+    font-size: 1.35rem;
+    font-weight: 700;
+    margin: 0;
+}
+
+.product-category-heading span {
+    color: var(--secondary-color);
+    font-size: 0.85rem;
 }
 
 /* Módulo Administrativo */
@@ -74,5 +376,33 @@ form input:focus, form select:focus, form textarea:focus {
     to { 
         opacity: 1; 
         transform: translateY(0); 
+    }
+}
+
+@media (max-width: 575.98px) {
+    .home-category-title {
+        font-size: 2rem;
+    }
+
+    .home-category-tabs {
+        gap: 0.75rem;
+    }
+
+    .home-category-tab {
+        flex: 1 1 140px;
+        min-width: 0;
+        padding: 1rem;
+    }
+
+    .home-hero {
+        min-height: 510px;
+    }
+
+    .home-hero h1 {
+        font-size: 2.7rem;
+    }
+
+    .home-hero-content {
+        padding: 2rem 0;
     }
 }
