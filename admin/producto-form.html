@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prostock Admin - Formulario Producto</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="../css/styles.css">
+</head>
+<body class="bg-light">
+    <nav class="navbar navbar-dark bg-dark mb-4">
+        <div class="container-fluid">
+            <a class="navbar-brand fw-bold" href="index.html">PROSTOCK ADMIN</a>
+        </div>
+    </nav>
+
+    <div class="container col-md-6">
+        <div class="card shadow-sm border-0">
+            <div class="card-body p-4">
+                <h4 class="card-title mb-4">Administrar Producto</h4>
+                
+                <form id="form-producto-admin">
+                    <div class="mb-3">
+                        <label class="form-label">Código del Producto</label>
+                        <input type="text" id="prod-codigo" class="form-control" required placeholder="Ej: PRI-101">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Nombre del Producto</label>
+                        <input type="text" id="prod-nombre" class="form-control" required placeholder="Ej: Resma Papel A4">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Categoría</label>
+                        <select id="prod-categoria" class="form-select" required>
+                            <option value="">Seleccione...</option>
+                            <option value="Papelería y Oficina">Papelería y Oficina</option>
+                            <option value="Escolar">Escolar</option>
+                            <option value="Aseo y Limpieza">Aseo y Limpieza</option>
+                            <option value="Insumos">Insumos</option>
+                        </select>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Precio ($)</label>
+                            <input type="number" id="prod-precio" class="form-control" min="0" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Stock</label>
+                            <input type="number" id="prod-stock" class="form-control" min="0" required>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">URL Imagen</label>
+                        <input type="url" id="prod-imagen" class="form-control" placeholder="https://ejemplo.com/imagen.jpg">
+                    </div>
+
+                    <div class="d-flex justify-content-between pt-2">
+                        <a href="productos-listar.html" class="btn btn-outline-secondary">Cancelar</a>
+                        <button type="submit" class="btn btn-success">Guardar Producto</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="../js/admin.js"></script>
+</body>
+</html>

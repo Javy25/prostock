@@ -1,0 +1,110 @@
+[
+  {
+    "id": 1,
+    "codigo": "PRI-101",
+    "nombre": "Resma Papel A4 75g",
+    "categoria": "Papelería y Oficina",
+    "precio": 3990,
+    "stock": 150,
+    "imagen": "https://images.unsplash.com/photo-1586075010923-2dd4570fb338?w=500&q=80"
+  },
+  {
+    "id": 2,
+    "codigo": "PRI-102",
+    "nombre": "Lápiz Pasta Azul (Pack 12u)",
+    "categoria": "Escolar",
+    "precio": 2490,
+    "stock": 80,
+    "imagen": "https://images.unsplash.com/photo-1585336261026-8f5786372966?w=500&q=80"
+  },
+  {
+    "id": 3,
+    "codigo": "PRI-103",
+    "nombre": "Corchetera Metálica Uso Rudo",
+    "categoria": "Papelería y Oficina",
+    "precio": 5990,
+    "stock": 45,
+    "imagen": "https://images.unsplash.com/photo-1544816155-12df9643f363?w=500&q=80"
+  },
+  {
+    "id": 4,
+    "codigo": "PRI-104",
+    "nombre": "Cuaderno Universitario 100 Hojas",
+    "categoria": "Escolar",
+    "precio": 1990,
+    "stock": 200,
+    "imagen": "https://images.unsplash.com/photo-1531346878377-a5be20888e57?w=500&q=80"
+  },
+  {
+    "id": 5,
+    "codigo": "PRI-105",
+    "nombre": "Perforadora de Papel 2 Orificios",
+    "categoria": "Papelería y Oficina",
+    "precio": 4490,
+    "stock": 30,
+    "imagen": "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=500&q=80"
+  },
+  {
+    "id": 6,
+    "codigo": "PRI-106",
+    "nombre": "Set Destacadores Pastel (Pack 4u)",
+    "categoria": "Escolar",
+    "precio": 3290,
+    "stock": 95,
+    "imagen": "https://images.unsplash.com/photo-1583485088034-697b5bc54ccd?w=500&q=80"
+  },
+  {
+    "id": 7,
+    "codigo": "PRI-107",
+    "nombre": "Archivador Tapa Dura Oficio",
+    "categoria": "Papelería y Oficina",
+    "precio": 2890,
+    "stock": 110,
+    "imagen": "https://images.unsplash.com/photo-1586281380349-632531db7ed4?w=500&q=80"
+  },
+  {
+    "id": 8,
+    "codigo": "PRI-108",
+    "nombre": "Tijeras de Oficina 8 Pulgadas",
+    "categoria": "Papelería y Oficina",
+    "precio": 1890,
+    "stock": 60,
+    "imagen": "https://images.unsplash.com/photo-1603796846097-bee99e4a601f?w=500&q=80"
+  },
+  {
+    "id": 9,
+    "codigo": "PRI-109",
+    "nombre": "Cinta Adhesiva Embalaje 45m",
+    "categoria": "Insumos",
+    "precio": 1200,
+    "stock": 300,
+    "imagen": "https://images.unsplash.com/photo-1589939705384-5185137a7f0f?w=500&q=80"
+  },
+  {
+    "id": 10,
+    "codigo": "PRI-110",
+    "nombre": "Alcohol Gel 500ml con Dosificador",
+    "categoria": "Aseo y Limpieza",
+    "precio": 2990,
+    "stock": 120,
+    "imagen": "https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=500&q=80"
+  },
+  {
+    "id": 11,
+    "codigo": "PRI-111",
+    "nombre": "Notas Adhesivas 76x76mm (Pack 3u)",
+    "categoria": "Papelería y Oficina",
+    "precio": 1590,
+    "stock": 180,
+    "imagen": "https://images.unsplash.com/photo-1568205612837-017257d2310a?w=500&q=80"
+  },
+  {
+    "id": 12,
+    "codigo": "PRI-112",
+    "nombre": "Marcadores Pizarra Acrílica (Pack 4u)",
+    "categoria": "Escolar",
+    "precio": 3790,
+    "stock": 75,
+    "imagen": "https://images.unsplash.com/photo-1595231712325-9fede275a29f?w=500&q=80"
+  }
+]

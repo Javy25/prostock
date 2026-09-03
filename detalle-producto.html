@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prostock - Detalle de Producto</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand fw-bold" href="index.html">PROSTOCK</a>
+            <div id="user-navbar-info"></div>
+        </div>
+    </nav>
+
+    <main class="container my-5">
+        <div class="row bg-white p-4 rounded shadow-sm border" id="detalle-container">
+            <!-- Cargado dinámicamente mediante JS -->
+        </div>
+    </main>
+
+    <script src="js/main.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const params = new URLSearchParams(window.location.search);
+            const id = Number(params.get('id'));
+            const productos = JSON.parse(localStorage.getItem('productos_db')) || [];
+            const producto = productos.find(p => p.id === id);
+
+            const container = document.getElementById('detalle-container');
+            if (!producto) {
+                container.innerHTML = `<div class="col-12 text-center py-5"><h4>Producto no encontrado.</h4><a href="productos.html" class="btn btn-primary mt-3">Volver al catálogo</a></div>`;
+                return;
+            }
+
+            container.innerHTML = `
+                <div class="col-md-6 text-center">
+                    <img src="${producto.imagen}" class="img-fluid rounded" style="max-height: 400px; object-fit: contain;">
+                </div>
+                <div class="col-md-6 d-flex flex-column justify-content-center">
+                    <span class="badge bg-secondary mb-2 w-fit-content">${producto.categoria}</span>
+                    <h2>${producto.nombre}</h2>
+                    <p class="text-muted mb-1">SKU / Código: <strong>${producto.codigo}</strong></p>
+                    <h3 class="text-primary fw-bold my-3">$${producto.precio.toLocaleString('es-CL')}</h3>
+                    <p>Stock disponible: <strong>${producto.stock} unidades</strong></p>
+                    <div class="d-flex gap-2 mt-3">
+                        <button onclick="agregarAlCarrito(${producto.id})" class="btn btn-danger btn-lg">
+                            <i class="bi bi-cart-plus"></i> Agregar al Carrito
+                        </button>
+                        <a href="productos.html" class="btn btn-outline-secondary btn-lg">Volver</a>
+                    </div>
+                </div>
+            `;
+        });
+    </script>
+</body>
+</html>

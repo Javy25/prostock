@@ -3,80 +3,69 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ProStock - Inicio</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <title>Prostock - Inicio</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="css/styles.css">
 </head>
-<body class="d-flex flex-column min-vh-100 bg-light">
-
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+<body>
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark sticky-top">
         <div class="container">
-            <a class="navbar-brand fw-bold" href="index.html">ProStock</a>
+            <a class="navbar-brand fw-bold" href="index.html">PROSTOCK</a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav me-auto">
-                    <li class="nav-item"><a class="nav-link active" href="index.html">Home</a></li>
+                    <li class="nav-item"><a class="nav-link active" href="index.html">Inicio</a></li>
                     <li class="nav-item"><a class="nav-link" href="productos.html">Productos</a></li>
                     <li class="nav-item"><a class="nav-link" href="nosotros.html">Nosotros</a></li>
-                    <li class="nav-item"><a class="nav-link" href="blogs.html">Blogs</a></li>
+                    <li class="nav-item"><a class="nav-link" href="blogs.html">Blog</a></li>
                     <li class="nav-item"><a class="nav-link" href="contacto.html">Contacto</a></li>
-                    <li class="nav-item"><a class="nav-link" href="login.html">Iniciar Sesion</a></li>
                 </ul>
-                <a href="carrito.html" class="btn btn-primary">
-                    Carrito <span id="cart-count" class="badge bg-light text-dark ms-1">0</span>
-                </a>
+                <div class="d-flex align-items-center gap-3">
+                    <a href="carrito.html" class="btn btn-outline-light position-relative">
+                        <i class="bi bi-cart3"></i>
+                        <span id="cart-count" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">0</span>
+                    </a>
+                    <div id="user-navbar-info" class="text-white small"></div>
+                </div>
             </div>
         </div>
     </nav>
 
-    <main class="container my-5 flex-grow-1">
-        <div class="p-5 mb-4 bg-secondary text-white rounded-3 shadow-sm">
-            <div class="container-fluid py-3">
-                <h1 class="display-5 fw-bold">Bienvenido a ProStock</h1>
-                <p class="col-md-8 fs-4">Soluciones integrales en papeleria, suministros de oficina y tecnologia para tu empresa o estudio.</p>
-                <a href="productos.html" class="btn btn-primary btn-lg mt-2">Ver Catalogo Completo</a>
+    <!-- Hero Banner -->
+    <header class="bg-primary text-white text-center py-5 mb-5 shadow-sm">
+        <div class="container py-3">
+            <h1 class="display-4 fw-bold">Soluciones Integrales para tu Oficina</h1>
+            <p class="lead">Insumos, papelería y productos escolares de la mejor calidad a un clic.</p>
+            <a href="productos.html" class="btn btn-light btn-lg font-semibold mt-2">Ver Catálogo Completo</a>
+        </div>
+    </header>
+
+    <!-- Catálogo de Productos Destacados -->
+    <main class="container my-4">
+        <div class="d-flex justify-content-between align-items-center mb-4 border-bottom pb-2">
+            <h2>Productos Destacados</h2>
+            <div class="w-25">
+                <input type="text" id="input-buscar" class="form-control" placeholder="Buscar por nombre o código...">
             </div>
         </div>
 
-        <h2 class="mb-4 pb-2 border-bottom">Categorias Destacadas</h2>
-
-        <div class="row g-4">
-            <div class="col-md-4">
-                <div class="card h-100 shadow-sm">
-                    <div class="card-body">
-                        <h5 class="card-title fw-bold">Escritorio</h5>
-                        <p class="card-text text-muted">Lapices, organizadores, corcheteras y accesorios de oficina.</p>
-                        <a href="productos.html" class="btn btn-outline-dark btn-sm">Explorar categoria</a>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-4">
-                <div class="card h-100 shadow-sm">
-                    <div class="card-body">
-                        <h5 class="card-title fw-bold">Papeleria</h5>
-                        <p class="card-text text-muted">Resmas, cuadernos, bloques de notas, carpetas y archivadores.</p>
-                        <a href="productos.html" class="btn btn-outline-dark btn-sm">Explorar categoria</a>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-4">
-                <div class="card h-100 shadow-sm">
-                    <div class="card-body">
-                        <h5 class="card-title fw-bold">Tecnologia</h5>
-                        <p class="card-text text-muted">Perifericos, mouses, teclados y suministros de impresion.</p>
-                        <a href="productos.html" class="btn btn-outline-dark btn-sm">Explorar categoria</a>
-                    </div>
-                </div>
-            </div>
+        <div class="row" id="productos-container">
+            <!-- Renderizado dinámico desde js/main.js -->
         </div>
     </main>
 
-    <footer class="bg-dark text-white text-center py-3 mt-auto">
-        <p class="mb-0 small">&copy; 2026 ProStock - Sistema de Gestion y Tienda Online. Todos los derechos reservados.</p>
+    <!-- Footer -->
+    <footer class="bg-dark text-white text-center py-4 mt-auto">
+        <div class="container">
+            <p class="mb-0">&copy; 2026 Prostock Inc. Todos los derechos reservados.</p>
+        </div>
     </footer>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script src="js/main.js"></script>
 </body>
 </html>
