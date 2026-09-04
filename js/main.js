@@ -27,7 +27,16 @@ async function cargarProductos() {
     if (!localStorage.getItem('productos_db')) {
         localStorage.setItem('productos_db', JSON.stringify(productosGlobales));
     } else {
-        productosGlobales = JSON.parse(localStorage.getItem('productos_db'));
+        const productosGuardados = JSON.parse(localStorage.getItem('productos_db'));
+        productosGlobales = productosGuardados.map(productoGuardado => {
+            const productoActual = productosGlobales.find(producto => producto.id === productoGuardado.id);
+            return productoActual ? {
+                ...productoGuardado,
+                imagen: productoActual.imagen,
+                ...(productoActual.imagenes ? { imagenes: productoActual.imagenes } : {})
+            } : productoGuardado;
+        });
+        localStorage.setItem('productos_db', JSON.stringify(productosGlobales));
     }
 
     renderizarCatalogo(productosGlobales);

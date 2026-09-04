@@ -66,7 +66,7 @@ function configurarFormularioProducto() {
             document.getElementById('prod-categoria').value = prod.categoria;
             document.getElementById('prod-precio').value = prod.precio;
             document.getElementById('prod-stock').value = prod.stock;
-            document.getElementById('prod-imagen').value = prod.imagen;
+            document.getElementById('prod-imagenes').value = prod.imagenes?.join('\n') || prod.imagen || '';
         }
     }
 
@@ -80,8 +80,10 @@ function configurarFormularioProducto() {
             categoria: document.getElementById('prod-categoria').value,
             precio: Number(document.getElementById('prod-precio').value),
             stock: Number(document.getElementById('prod-stock').value),
-            imagen: document.getElementById('prod-imagen').value.trim() || 'https://via.placeholder.com/150'
+            imagenes: document.getElementById('prod-imagenes').value.split('\n').map(imagen => imagen.trim()).filter(Boolean)
         };
+
+        nuevoProd.imagen = nuevoProd.imagenes[0] || 'https://via.placeholder.com/150';
 
         if (prodId) {
             const index = productos.findIndex(p => p.id == prodId);

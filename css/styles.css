@@ -314,6 +314,22 @@ main {
     transform: scale(1.03);
 }
 
+.product-carousel {
+    background: #f7f9fc;
+    border-radius: 0.5rem;
+    overflow: hidden;
+}
+
+.product-detail-image {
+    height: 400px;
+    object-fit: contain;
+    padding: 1rem;
+}
+
+.product-carousel .carousel-indicators [data-bs-target] {
+    background-color: var(--primary-color);
+}
+
 .product-category-section {
     margin-bottom: 2.5rem;
 }

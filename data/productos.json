@@ -1,12 +1,16 @@
 [
-  {
-    "id": 1,
-    "codigo": "PRI-101",
-    "nombre": "Resma Papel A4 75g",
-    "categoria": "Papelería y Oficina",
-    "precio": 3990,
-    "stock": 150,
-    "imagen": "https://images.unsplash.com/photo-1586075010923-2dd4570fb338?w=500&q=80"
+{
+  "id": 1,
+  "codigo": "PRI-101",
+  "nombre": "Resma Papel A4 75g",
+  "categoria": "Papelería y Oficina",
+  "precio": 3990,
+  "stock": 150,     
+    "imagen": "img/productos/resma-papel-a4-75g.png",
+    "imagenes": [
+      "img/productos/resma-papel-a4-75g.png",
+      "https://diper.cl/wp-content/uploads/2019/02/PAPEL-FOTOCOPIA-CARTA-75G-500-HOJAS-SNOWY-C.jpg"
+    ]
   },
   {
     "id": 2,
@@ -15,7 +19,7 @@
     "categoria": "Escolar",
     "precio": 2490,
     "stock": 80,
-    "imagen": "https://images.unsplash.com/photo-1585336261026-8f5786372966?w=500&q=80"
+    "imagen": "https://cdnx.jumpseller.com/libreria-mabeduna1/image/72740802/mabeduna_bic-caja-lapiz-pasta-12-unidades-azul-punta-fina.jpg?1770264334"
   },
   {
     "id": 3,
@@ -24,7 +28,7 @@
     "categoria": "Papelería y Oficina",
     "precio": 5990,
     "stock": 45,
-    "imagen": "https://images.unsplash.com/photo-1544816155-12df9643f363?w=500&q=80"
+    "imagen": "https://www.dipy.cl/cdn/shop/files/cl_558920_1_700x.jpg?v=1752549005"
   },
   {
     "id": 4,
@@ -33,7 +37,7 @@
     "categoria": "Escolar",
     "precio": 1990,
     "stock": 200,
-    "imagen": "https://images.unsplash.com/photo-1531346878377-a5be20888e57?w=500&q=80"
+    "imagen": "https://images.unsplash.com/photo-1456324504439-367cee3b3c32?w=700&q=85"
   },
   {
     "id": 5,
@@ -42,7 +46,7 @@
     "categoria": "Papelería y Oficina",
     "precio": 4490,
     "stock": 30,
-    "imagen": "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=500&q=80"
+    "imagen": "https://images.unsplash.com/photo-1524758631624-e2822e304c36?w=700&q=85"
   },
   {
     "id": 6,
@@ -51,7 +55,7 @@
     "categoria": "Escolar",
     "precio": 3290,
     "stock": 95,
-    "imagen": "https://images.unsplash.com/photo-1583485088034-697b5bc54ccd?w=500&q=80"
+    "imagen": "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=700&q=85"
   },
   {
     "id": 7,
@@ -60,7 +64,7 @@
     "categoria": "Papelería y Oficina",
     "precio": 2890,
     "stock": 110,
-    "imagen": "https://images.unsplash.com/photo-1586281380349-632531db7ed4?w=500&q=80"
+    "imagen": "https://images.unsplash.com/photo-1517842645767-c639042777db?w=700&q=85"
   },
   {
     "id": 8,
@@ -69,7 +73,7 @@
     "categoria": "Papelería y Oficina",
     "precio": 1890,
     "stock": 60,
-    "imagen": "https://images.unsplash.com/photo-1603796846097-bee99e4a601f?w=500&q=80"
+    "imagen": "https://images.unsplash.com/photo-1456735190827-d1262f71b8a3?w=700&q=85"
   },
   {
     "id": 9,
@@ -78,7 +82,7 @@
     "categoria": "Insumos",
     "precio": 1200,
     "stock": 300,
-    "imagen": "https://images.unsplash.com/photo-1589939705384-5185137a7f0f?w=500&q=80"
+    "imagen": "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=700&q=85"
   },
   {
     "id": 10,
@@ -87,7 +91,7 @@
     "categoria": "Aseo y Limpieza",
     "precio": 2990,
     "stock": 120,
-    "imagen": "https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=500&q=80"
+    "imagen": "https://images.unsplash.com/photo-1584744982491-665216d95f8b?w=700&q=85"
   },
   {
     "id": 11,
@@ -96,7 +100,7 @@
     "categoria": "Papelería y Oficina",
     "precio": 1590,
     "stock": 180,
-    "imagen": "https://images.unsplash.com/photo-1568205612837-017257d2310a?w=500&q=80"
+    "imagen": "https://images.unsplash.com/photo-1499951360447-b19be8fe80f5?w=700&q=85"
   },
   {
     "id": 12,
@@ -105,6 +109,78 @@
     "categoria": "Escolar",
     "precio": 3790,
     "stock": 75,
-    "imagen": "https://images.unsplash.com/photo-1595231712325-9fede275a29f?w=500&q=80"
+    "imagen": "https://images.unsplash.com/photo-1526948128573-703ee1aeb6fa?w=700&q=85"
+  },
+  {
+    "id": 13,
+    "codigo": "PRI-113",
+    "nombre": "Pizarra Blanca Magnética 60x90cm",
+    "categoria": "Papelería y Oficina",
+    "precio": 18990,
+    "stock": 24,
+    "imagen": "https://images.unsplash.com/photo-1556761175-b413da4baf72?w=700&q=85"
+  },
+  {
+    "id": 14,
+    "codigo": "PRI-114",
+    "nombre": "Lápices de Colores Profesionales (24u)",
+    "categoria": "Escolar",
+    "precio": 5490,
+    "stock": 65,
+    "imagen": "https://images.unsplash.com/photo-1513364776144-60967b0f800f?w=700&q=85"
+  },
+  {
+    "id": 15,
+    "codigo": "PRI-115",
+    "nombre": "Carpeta Clasificadora A4 con Cierre",
+    "categoria": "Papelería y Oficina",
+    "precio": 3990,
+    "stock": 70,
+    "imagen": "https://images.unsplash.com/photo-1586282391129-76a6df230234?w=700&q=85"
+  },
+  {
+    "id": 16,
+    "codigo": "PRI-116",
+    "nombre": "Dispensador de Cinta de Embalaje",
+    "categoria": "Insumos",
+    "precio": 6990,
+    "stock": 32,
+    "imagen": "https://images.unsplash.com/photo-1586864387967-d02ef85d93e8?w=700&q=85"
+  },
+  {
+    "id": 17,
+    "codigo": "PRI-117",
+    "nombre": "Organizador de Escritorio de Malla",
+    "categoria": "Papelería y Oficina",
+    "precio": 4990,
+    "stock": 48,
+    "imagen": "https://images.unsplash.com/photo-1497215842964-222b430dc094?w=700&q=85"
+  },
+  {
+    "id": 18,
+    "codigo": "PRI-118",
+    "nombre": "Jabón Líquido para Manos 500ml",
+    "categoria": "Aseo y Limpieza",
+    "precio": 2490,
+    "stock": 90,
+    "imagen": "https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=700&q=85"
+  },
+  {
+    "id": 19,
+    "codigo": "PRI-119",
+    "nombre": "Papel Fotográfico Brillante A4 (20u)",
+    "categoria": "Insumos",
+    "precio": 4990,
+    "stock": 40,
+    "imagen": "https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=700&q=85"
+  },
+  {
+    "id": 20,
+    "codigo": "PRI-120",
+    "nombre": "Mochila Escolar Reforzada",
+    "categoria": "Escolar",
+    "precio": 15990,
+    "stock": 28,
+    "imagen": "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=700&q=85"
   }
 ]

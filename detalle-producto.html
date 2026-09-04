@@ -22,12 +22,25 @@
         </div>
     </main>
 
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script src="js/main.js"></script>
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
+        document.addEventListener('DOMContentLoaded', async () => {
             const params = new URLSearchParams(window.location.search);
             const id = Number(params.get('id'));
-            const productos = JSON.parse(localStorage.getItem('productos_db')) || [];
+            const productosGuardados = JSON.parse(localStorage.getItem('productos_db')) || [];
+            let productos = productosGuardados;
+            try {
+                const respuesta = await fetch('data/productos.json');
+                const productosBase = await respuesta.json();
+                productos = productosGuardados.map(productoGuardado => {
+                    const productoBase = productosBase.find(producto => producto.id === productoGuardado.id);
+                    return productoBase ? { ...productoGuardado, imagen: productoBase.imagen, imagenes: productoBase.imagenes || productoGuardado.imagenes } : productoGuardado;
+                });
+                productos = productos.length ? productos : productosBase;
+            } catch (error) {
+                // Usa la copia local si la página se abre sin servidor.
+            }
             const producto = productos.find(p => p.id === id);
 
             const container = document.getElementById('detalle-container');
@@ -36,9 +49,23 @@
                 return;
             }
 
+            const imagenes = producto.imagenes?.length ? producto.imagenes : [producto.imagen];
+            const indicadores = imagenes.map((imagen, indice) => `
+                <button type="button" data-bs-target="#productoCarrusel" data-bs-slide-to="${indice}" class="${indice === 0 ? 'active' : ''}" aria-label="Imagen ${indice + 1}"></button>
+            `).join('');
+            const slides = imagenes.map((imagen, indice) => `
+                <div class="carousel-item ${indice === 0 ? 'active' : ''}">
+                    <img src="${imagen}" class="d-block w-100 product-detail-image" alt="${producto.nombre}, imagen ${indice + 1}">
+                </div>
+            `).join('');
+
             container.innerHTML = `
                 <div class="col-md-6 text-center">
-                    <img src="${producto.imagen}" class="img-fluid rounded" style="max-height: 400px; object-fit: contain;">
+                    <div id="productoCarrusel" class="carousel slide product-carousel" data-bs-ride="false">
+                        <div class="carousel-indicators">${indicadores}</div>
+                        <div class="carousel-inner">${slides}</div>
+                        ${imagenes.length > 1 ? `<button class="carousel-control-prev" type="button" data-bs-target="#productoCarrusel" data-bs-slide="prev"><span class="carousel-control-prev-icon"></span><span class="visually-hidden">Anterior</span></button><button class="carousel-control-next" type="button" data-bs-target="#productoCarrusel" data-bs-slide="next"><span class="carousel-control-next-icon"></span><span class="visually-hidden">Siguiente</span></button>` : ''}
+                    </div>
                 </div>
                 <div class="col-md-6 d-flex flex-column justify-content-center">
                     <span class="badge bg-secondary mb-2 w-fit-content">${producto.categoria}</span>
