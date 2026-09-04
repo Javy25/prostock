@@ -19,7 +19,8 @@ async function cargarProductos() {
         // Fallback a localStorage si ya fue modificado por el Admin
         productosGlobales = JSON.parse(localStorage.getItem('productos_db')) || [
             { id: 1, codigo: "PRI-101", nombre: "Resma Papel A4 75g", categoria: "Papelería y Oficina", precio: 3990, stock: 150, imagen: "https://images.unsplash.com/photo-1586075010923-2dd4570fb338?w=500&q=80" },
-            { id: 2, codigo: "PRI-102", nombre: "Lápiz Pasta Azul (12u)", categoria: "Escolar", precio: 2490, stock: 80, imagen: "https://images.unsplash.com/photo-1585336261026-8f5786372966?w=500&q=80" }
+            { id: 2, codigo: "PRI-102", nombre: "Lápiz Pasta Azul (12u)", categoria: "Escolar", precio: 2490, stock: 80, imagen: "https://images.unsplash.com/photo-1585336261026-8f5786372966?w=500&q=80" },
+            { id: 3, codigo: "PRI-103", nombre: "Corchetera Metálica Uso Rudo", categoria:"Papelería y Oficina", precio:  5990, stock: 80, imagen: "https://images.unsplash.com/photo-1544816155-12df9643f363?w=500&q=80" }
         ];
     }
     
