@@ -66,8 +66,11 @@
     <main class="container my-4">
         <div class="d-flex justify-content-between align-items-center mb-4 border-bottom pb-2">
             <h2>Productos destacados</h2>
-            <div class="w-25">
+            <div class="d-flex gap-2 w-50">
                 <input type="text" id="input-buscar" class="form-control" placeholder="Buscar por nombre o código...">
+                <select id="filtro-categoria" class="form-select" aria-label="Filtrar productos por categoría">
+                    <option value="">Todas las categorías</option>
+                </select>
             </div>
         </div>
 

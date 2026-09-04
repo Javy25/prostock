@@ -37,7 +37,12 @@
                 <h2>Catálogo de Productos</h2>
             </div>
             <div class="col-md-6">
-                <input type="text" id="input-buscar" class="form-control" placeholder="Buscar por código (ej: PRI-101) o nombre...">
+                <div class="d-flex gap-2">
+                    <input type="text" id="input-buscar" class="form-control" placeholder="Buscar por código o nombre...">
+                    <select id="filtro-categoria" class="form-select" aria-label="Filtrar productos por categoría">
+                        <option value="">Todas las categorías</option>
+                    </select>
+                </div>
             </div>
         </div>
 

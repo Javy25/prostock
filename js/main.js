@@ -43,6 +43,8 @@ function configurarCategoriasInicio() {
     const categorias = [...new Set(productosGlobales.map(producto => producto.categoria))];
     const mostrarCategoria = categoria => {
         renderizarCatalogo(productosGlobales.filter(producto => producto.categoria === categoria));
+        const filtroCategoria = document.getElementById('filtro-categoria');
+        if (filtroCategoria) filtroCategoria.value = categoria;
         tabs.querySelectorAll('button').forEach(tab => tab.classList.toggle('active', tab.dataset.category === categoria));
     };
 
@@ -187,13 +189,31 @@ function cerrarSesion() {
 
 function configurarFiltrosYBuscador() {
     const inputBuscar = document.getElementById('input-buscar');
-    if (!inputBuscar) return;
+    const filtroCategoria = document.getElementById('filtro-categoria');
+    if (!inputBuscar && !filtroCategoria) return;
 
-    inputBuscar.addEventListener('input', (e) => {
-        const texto = e.target.value.toLowerCase();
+    if (filtroCategoria) {
+        const categorias = [...new Set(productosGlobales.map(producto => producto.categoria))].sort();
+        categorias.forEach(categoria => {
+            const opcion = document.createElement('option');
+            opcion.value = categoria;
+            opcion.textContent = categoria;
+            filtroCategoria.appendChild(opcion);
+        });
+        const categoriaActiva = document.querySelector('#home-category-tabs .active');
+        if (categoriaActiva) filtroCategoria.value = categoriaActiva.dataset.category;
+    }
+
+    const aplicarFiltros = () => {
+        const texto = inputBuscar ? inputBuscar.value.toLowerCase() : '';
+        const categoria = filtroCategoria ? filtroCategoria.value : '';
         const filtrados = productosGlobales.filter(p => 
-            p.nombre.toLowerCase().includes(texto) || p.codigo.toLowerCase().includes(texto)
+            (p.nombre.toLowerCase().includes(texto) || p.codigo.toLowerCase().includes(texto)) &&
+            (!categoria || p.categoria === categoria)
         );
         renderizarCatalogo(filtrados);
-    });
+    };
+
+    if (inputBuscar) inputBuscar.addEventListener('input', aplicarFiltros);
+    if (filtroCategoria) filtroCategoria.addEventListener('change', aplicarFiltros);
 }
