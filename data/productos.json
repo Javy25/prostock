@@ -6,10 +6,10 @@
   "categoria": "Papelería y Oficina",
   "precio": 3990,
   "stock": 150,     
-    "imagen": "img/productos/resma-papel-a4-75g.png",
+    "imagen": "https://diper.cl/wp-content/uploads/2019/02/PAPEL-FOTOCOPIA-CARTA-75G-500-HOJAS-SNOWY-C.jpg",
     "imagenes": [
-      "img/productos/resma-papel-a4-75g.png",
-      "https://diper.cl/wp-content/uploads/2019/02/PAPEL-FOTOCOPIA-CARTA-75G-500-HOJAS-SNOWY-C.jpg"
+      "https://diper.cl/wp-content/uploads/2019/02/PAPEL-FOTOCOPIA-CARTA-75G-500-HOJAS-SNOWY-C.jpg", 
+      "https://diper.cl/wp-content/uploads/2019/02/PAPEL-FOTOCOPIA-CARTA-75G-500-HOJAS-SNOWY.jpg"
     ]
   },
   {
