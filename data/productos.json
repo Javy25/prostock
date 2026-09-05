@@ -2,14 +2,14 @@
 {
   "id": 1,
   "codigo": "PRI-101",
-  "nombre": "Resma Papel A4 75g",
+  "nombre": "Resma Papel Fotocopia CARTA 75gr. EQUALIT",
   "categoria": "Papelería y Oficina",
   "precio": 3990,
   "stock": 150,     
-    "imagen": "https://diper.cl/wp-content/uploads/2019/02/PAPEL-FOTOCOPIA-CARTA-75G-500-HOJAS-SNOWY-C.jpg",
+    "imagen": "https://media.falabella.com/falabellaCL/152516129_01/w=1500,h=1500,fit=cover",
     "imagenes": [
-      "https://diper.cl/wp-content/uploads/2019/02/PAPEL-FOTOCOPIA-CARTA-75G-500-HOJAS-SNOWY-C.jpg", 
-      "https://diper.cl/wp-content/uploads/2019/02/PAPEL-FOTOCOPIA-CARTA-75G-500-HOJAS-SNOWY.jpg"
+      "https://media.falabella.com/falabellaCL/152516129_01/w=1500,h=1500,fit=cover", 
+      "https://media.falabella.com/falabellaCL/152516129_02/w=1500,h=1500,fit=cover"
     ]
   },
   {
