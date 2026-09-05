@@ -227,3 +227,46 @@ function configurarFiltrosYBuscador() {
     if (inputBuscar) inputBuscar.addEventListener('input', aplicarFiltros);
     if (filtroCategoria) filtroCategoria.addEventListener('change', aplicarFiltros);
 }
+
+document.addEventListener('DOMContentLoaded', () => {
+    const filterButtons = document.querySelectorAll('#filter-buttons .btn');
+    const blogItems = document.querySelectorAll('.blog-item');
+    const searchInput = document.getElementById('blog-search');
+
+    if (filterButtons.length > 0) {
+        filterButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                filterButtons.forEach(btn => btn.classList.remove('active'));
+                button.classList.add('active');
+
+                const categoriaSeleccionada = button.getAttribute('data-filter');
+
+                blogItems.forEach(tarjeta => {
+                    const categoriaTarjeta = tarjeta.getAttribute('data-category');
+
+                    if (categoriaSeleccionada === 'all' || categoriaTarjeta === categoriaSeleccionada) {
+                        tarjeta.style.display = 'block';
+                    } else {
+                        tarjeta.style.display = 'none';
+                    }
+                });
+            });
+        });
+    }
+    if (searchInput) {
+        searchInput.addEventListener('input', (e) => {
+            const busqueda = e.target.value.toLowerCase().trim();
+
+            blogItems.forEach(item => {
+                const titulo = item.querySelector('.card-title')?.textContent.toLowerCase() || '';
+                const texto = item.querySelector('.card-text')?.textContent.toLowerCase() || '';
+
+                if (titulo.includes(busqueda) || texto.includes(busqueda)) {
+                    item.style.display = 'block';
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+        });
+    }
+}); 
