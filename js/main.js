@@ -270,3 +270,24 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 }); 
+/* --- Efecto Interactivo de Chispas en el Cursor --- */
+document.addEventListener('mousemove', function(e) {
+    const spark = document.createElement('div');
+    spark.className = 'cursor-spark';
+    
+    // Posiciona la chispa donde está el mouse
+    spark.style.left = e.pageX + 'px';
+    spark.style.top = e.pageY + 'px';
+    
+    // Tamaño aleatorio para que se vea natural
+    const size = Math.random() * 8 + 4;
+    spark.style.width = size + 'px';
+    spark.style.height = size + 'px';
+    
+    document.body.appendChild(spark);
+    
+    // Borra la chispa después de 0.8 segundos para no llenar la memoria
+    setTimeout(() => {
+        spark.remove();
+    }, 800);
+});
