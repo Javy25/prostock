@@ -1,216 +1,206 @@
 [
-{
-  "id": 1,
-  "codigo": "PRI-101",
-  "nombre": "Resma Papel Fotocopia CARTA 75gr. EQUALIT",
-  "categoria": "Papelería y Oficina",
-  "precio": 3990,
-  "stock": 150,     
-    "imagen": "https://media.falabella.com/falabellaCL/152516129_01/w=1500,h=1500,fit=cover",
-    "imagenes": [
-      "https://media.falabella.com/falabellaCL/152516129_01/w=1500,h=1500,fit=cover", 
-      "https://media.falabella.com/falabellaCL/152516129_02/w=1500,h=1500,fit=cover"
-    ]
+  {
+    "id": 1,
+    "codigo": "PRI-101",
+    "nombre": "Resma de papel bond tamaño carta (500 hojas, 75g)",
+    "categoria": "Papelería y Oficina",
+    "precio": 3290,
+    "stock": 55,
+    "imagen": "https://media.falabella.com/falabellaCL/155704368_01/w=1500,h=1500,fit=cover",
+    "imagenes": ["https://media.falabella.com/falabellaCL/155704368_01/w=1500,h=1500,fit=cover",
+                  "https://media.falabella.com/falabellaCL/155704368_05/w=1500,h=1500,fit=cover"]
   },
   {
     "id": 2,
     "codigo": "PRI-102",
-    "nombre": "Caja 12 Lápices Tinta Gel 100% Borrable Azul",
-    "categoria": "Escolar",
-    "precio": 2490,
-    "stock": 80,
-    "imagen": "https://media.falabella.com/falabellaCL/147027254_01/w=1500,h=1500,fit=cover",
-    "imagenes": [
-      "https://media.falabella.com/falabellaCL/147027254_01/w=1500,h=1500,fit=cover", 
-      "https://media.falabella.com/falabellaCL/147027254_02/w=1500,h=1500,fit=cover"
-    ]
+    "nombre": "Carpeta Colgante Isofit Termolaminada Azul",
+    "categoria": "Papelería y Oficina",
+    "precio": 3590,
+    "stock": 60,
+    "imagen": "https://media.falabella.com/falabellaCL/157094835_01/w=1500,h=1500,fit=cover",
+    "imagenes": ["https://media.falabella.com/falabellaCL/157094835_01/w=1500,h=1500,fit=cover",
+                   "https://media.falabella.com/falabellaCL/157094835_03/w=1500,h=1500,fit=cover"]
   },
   {
     "id": 3,
     "codigo": "PRI-103",
-    "nombre": "Corchetera Metálica Heavy Duty 210Hj Adix",
+    "nombre": "Calculadora de Doble Pantalla Electrónica De 12 dígitos",
     "categoria": "Papelería y Oficina",
-    "precio": 5990,
-    "stock": 45,
-    "imagen": "https://media.falabella.com/falabellaCL/147949530_01/w=1500,h=1500,fit=cover",
-    "imagenes": [
-      "https://media.falabella.com/falabellaCL/147949530_01/w=1500,h=1500,fit=cover",
-      "https://media.falabella.com/falabellaCL/147949530_02/w=1500,h=1500,fit=cover"
-    ]
+    "precio": 9990,
+    "stock": 65,
+    "imagen": "https://media.falabella.com/falabellaCL/116536989_01/w=1500,h=1500,fit=cover",
+    "imagenes": ["https://media.falabella.com/falabellaCL/116536989_01/w=1500,h=1500,fit=cover",
+                   "https://media.falabella.com/falabellaCL/116536989_03/w=1500,h=1500,fit=cover"]
   },
   {
     "id": 4,
     "codigo": "PRI-104",
-    "nombre": "Cuaderno Siete Colores tapa dura 100 hojas",
-    "categoria": "Escolar",
-    "precio": 1990,
-    "stock": 200,
-    "imagen": "https://media.falabella.com/falabellaCL/155554546_01/w=1500,h=1500,fit=cover",
-    "imagenes": [
-      "https://media.falabella.com/falabellaCL/155554546_01/w=1500,h=1500,fit=cover",
-      "https://media.falabella.com/falabellaCL/155554546_02/w=1500,h=1500,fit=cover"
-    ]
+    "nombre": "Perforadora de papel de dos orificios de uso pesado",
+    "categoria": "Papelería y Oficina",
+    "precio": 4190,
+    "stock": 70,
+    "imagen": "https://media.falabella.com/falabellaCL/148506226_01/w=1500,h=1500,fit=cover",
+    "imagenes": ["https://media.falabella.com/falabellaCL/148506226_01/w=1500,h=1500,fit=cover",
+                   "https://media.falabella.com/falabellaCL/148506226_02/w=1500,h=1500,fit=cover"]
   },
   {
     "id": 5,
     "codigo": "PRI-105",
-    "nombre": "Perforadora Metal 60 hojas Kangaro Negra",
+    "nombre": "Sellos fechadores automáticos y entintados",
     "categoria": "Papelería y Oficina",
     "precio": 4490,
-    "stock": 30,
-    "imagen": "https://media.falabella.com/falabellaCL/147843655_01/w=1500,h=1500,fit=cover",
-    "imagenes": [
-      "https://media.falabella.com/falabellaCL/147843655_01/w=1500,h=1500,fit=cover",
-      "https://media.falabella.com/falabellaCL/147843655_02/w=1500,h=1500,fit=cover"
-    ]
+    "stock": 75,
+    "imagen": "",
+    "imagenes": []
   },
   {
     "id": 6,
     "codigo": "PRI-106",
-    "nombre": "Set de 4 Destacadores Stabilo Boss Original Pastel",
+    "nombre": "Cuadernos universitarios empastados de 100 hojas (cuadro grande/chico y línea)",
     "categoria": "Escolar",
-    "precio": 3290,
-    "stock": 95,
-    "imagen": "https://media.falabella.com/falabellaCL/155290189_01/w=1500,h=1500,fit=cover",
-    "imagenes": [
-      "https://media.falabella.com/falabellaCL/155290189_01/w=1500,h=1500,fit=cover",
-      "https://media.falabella.com/falabellaCL/155290189_02/w=1500,h=1500,fit=cover"
-    ]
+    "precio": 4790,
+    "stock": 80,
+    "imagen": "",
+    "imagenes": []
   },
   {
     "id": 7,
     "codigo": "PRI-107",
-    "nombre": "Archivador Tapa Dura Oficio",
-    "categoria": "Papelería y Oficina",
-    "precio": 2890,
-    "stock": 110,
-    "imagen": "https://media.falabella.com/falabellaCL/139369818_01/w=1500,h=1500,fit=cover"
+    "nombre": "Caja de lápices de colores de madera (12 o 24 unidades)",
+    "categoria": "Escolar",
+    "precio": 5090,
+    "stock": 85,
+    "imagen": "",
+    "imagenes": []
   },
   {
     "id": 8,
     "codigo": "PRI-108",
-    "nombre": "Tijera Oficina Hogar Premium 21 cms",
-    "categoria": "Papelería y Oficina",
-    "precio": 1890,
-    "stock": 60,
-    "imagen": "https://media.falabella.com/falabellaCL/150605449_01/w=1500,h=1500,fit=cover2"
+    "nombre": "Estuche escolar de lona con doble compartimento",
+    "categoria": "Escolar",
+    "precio": 5390,
+    "stock": 90,
+    "imagen": "",
+    "imagenes": []
   },
   {
     "id": 9,
     "codigo": "PRI-109",
-    "nombre": "Cinta de Embalaje Bysupply Frágil 45 mm x 100 m",
-    "categoria": "Insumos",
-    "precio": 1200,
-    "stock": 300,
-    "imagen": "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=700&q=85"
+    "nombre": "Tijeras escolares de punta roma con mango ergonómico",
+    "categoria": "Escolar",
+    "precio": 5690,
+    "stock": 95,
+    "imagen": "",
+    "imagenes": []
   },
   {
     "id": 10,
     "codigo": "PRI-110",
-    "nombre": "Dispensador De Jabon Liquido Alcohol Gel Shampo 500ml Blanco",
-    "categoria": "Aseo y Limpieza",
-    "precio": 2990,
-    "stock": 120,
-    "imagen": "https://media.falabella.com/falabellaCL/150687553_01/w=1500,h=1500,fit=cover",
-    "imagenes": [
-      "https://media.falabella.com/falabellaCL/150687553_01/w=1500,h=1500,fit=cover",
-      "https://media.falabella.com/falabellaCL/150687553_02/w=1500,h=1500,fit=cover"
-    ]
+    "nombre": "Compás de precisión con adaptador universal",
+    "categoria": "Escolar",
+    "precio": 5990,
+    "stock": 100,
+    "imagen": "",
+    "imagenes": []
   },
   {
     "id": 11,
     "codigo": "PRI-111",
-    "nombre": "Nota Adhesivas 7x7 Cm 100 Hojas",
-    "categoria": "Papelería y Oficina",
-    "precio": 1590,
-    "stock": 180,
-    "imagen": "https://media.falabella.com/falabellaCL/139666063_01/w=1500,h=1500,fit=cover"
+    "nombre": "Cartuchos de tóner o tinta para impresoras láser y de inyección",
+    "categoria": "Insumos",
+    "precio": 6290,
+    "stock": 105,
+    "imagen": "",
+    "imagenes": []
   },
   {
     "id": 12,
     "codigo": "PRI-112",
-    "nombre": "Set de 9 Marcadores",
-    "categoria": "Escolar",
-    "precio": 3790,
-    "stock": 75,
-    "imagen": "https://media.falabella.com/falabellaCL/144768053_01/w=1500,h=1500,fit=cover"
+    "nombre": "Cinta de embalaje transparente de 48 mm x 50 metros",
+    "categoria": "Insumos",
+    "precio": 6590,
+    "stock": 110,
+    "imagen": "",
+    "imagenes": []
   },
   {
     "id": 13,
     "codigo": "PRI-113",
-    "nombre": "Pizarra magnética 60x80 cm Blanco",
-    "categoria": "Papelería y Oficina",
-    "precio": 18990,
-    "stock": 24,
-    "imagen": "https://media.falabella.com/sodimacCL/2110059_01/w=1500,h=1500,fit=cover",
-    "imagenes": [
-      "https://media.falabella.com/sodimacCL/2110059_01/w=1500,h=1500,fit=cover",
-      "https://media.falabella.com/sodimacCL/2110059_02/w=1500,h=1500,fit=cover"
-    ]
+    "nombre": "Grapas estándar galvanizadas para grapadora de escritorio (caja de 5000 unidades)",
+    "categoria": "Insumos",
+    "precio": 6890,
+    "stock": 115,
+    "imagen": "",
+    "imagenes": []
   },
   {
     "id": 14,
     "codigo": "PRI-114",
-    "nombre": "Lápices de Colores Profesionales (24u)",
-    "categoria": "Escolar",
-    "precio": 5490,
-    "stock": 65,
-    "imagen": "https://media.falabella.com/sodimacCL/2110059_01/w=1500,h=1500,fit=cover"
+    "nombre": "Notas adhesivas tipo Post-it cuadradas de 76 x 76 mm",
+    "categoria": "Insumos",
+    "precio": 7190,
+    "stock": 120,
+    "imagen": "",
+    "imagenes": []
   },
   {
     "id": 15,
     "codigo": "PRI-115",
-    "nombre": "Carpeta Clasificadora A4 con Cierre",
-    "categoria": "Papelería y Oficina",
-    "precio": 3990,
-    "stock": 70,
-    "imagen": "https://images.unsplash.com/photo-1586282391129-76a6df230234?w=700&q=85"
+    "nombre": "Blíster de pilas alcalinas AA y AAA",
+    "categoria": "Insumos",
+    "precio": 7490,
+    "stock": 125,
+    "imagen": "",
+    "imagenes": []
   },
   {
     "id": 16,
     "codigo": "PRI-116",
-    "nombre": "Dispensador de Cinta de Embalaje",
-    "categoria": "Insumos",
-    "precio": 6990,
-    "stock": 32,
-    "imagen": "https://images.unsplash.com/photo-1586864387967-d02ef85d93e8?w=700&q=85"
+    "nombre": "Disolvente multiuso o líquido limpiapisos concentrado (bidón de 5 litros)",
+    "categoria": "Aseo y Limpieza",
+    "precio": 7790,
+    "stock": 130,
+    "imagen": "",
+    "imagenes": []
   },
   {
     "id": 17,
     "codigo": "PRI-117",
-    "nombre": "Organizador de Escritorio de Malla",
-    "categoria": "Papelería y Oficina",
-    "precio": 4990,
-    "stock": 48,
-    "imagen": "https://images.unsplash.com/photo-1497215842964-222b430dc094?w=700&q=85"
+    "nombre": "Rollos de papel higiénico institucional o toallas de papel interfoliadas",
+    "categoria": "Aseo y Limpieza",
+    "precio": 8090,
+    "stock": 135,
+    "imagen": "",
+    "imagenes": []
   },
   {
     "id": 18,
     "codigo": "PRI-118",
-    "nombre": "Jabón Líquido para Manos 500ml",
+    "nombre": "Alcohol gel sanitizante para manos en formato dispensador (1 litro)",
     "categoria": "Aseo y Limpieza",
-    "precio": 2490,
-    "stock": 90,
-    "imagen": "https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=700&q=85"
+    "precio": 8390,
+    "stock": 140,
+    "imagen": "",
+    "imagenes": []
   },
   {
     "id": 19,
     "codigo": "PRI-119",
-    "nombre": "Papel Fotográfico Brillante A4 (20u)",
-    "categoria": "Insumos",
-    "precio": 4990,
-    "stock": 40,
-    "imagen": "https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=700&q=85"
+    "nombre": "Bolsas de basura industriales de alta resistencia (tamaño 120 litros)",
+    "categoria": "Aseo y Limpieza",
+    "precio": 8690,
+    "stock": 145,
+    "imagen": "",
+    "imagenes": []
   },
   {
     "id": 20,
     "codigo": "PRI-120",
-    "nombre": "Mochila Escolar Reforzada",
-    "categoria": "Escolar",
-    "precio": 15990,
-    "stock": 28,
-    "imagen": "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=700&q=85"
+    "nombre": "Paños de microfibra multiuso para limpieza de superficies y pantallas",
+    "categoria": "Aseo y Limpieza",
+    "precio": 8990,
+    "stock": 150,
+    "imagen": "",
+    "imagenes": []
   }
 ]
-
-
