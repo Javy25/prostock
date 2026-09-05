@@ -273,7 +273,7 @@ document.addEventListener('DOMContentLoaded', () => {
 // EFECTO INTERACTIVO: Estela de mini productos de papelería al mover el mouse
 document.addEventListener('mousemove', function(e) {
     // Arreglo con íconos de papelería e insumos de oficina
-    const productos = ['✏️', '📓', '✂️', '📎', '🖊️', '📏', '🖍️', '📌'];
+    const productos = ['✏️', '📓', '✂️', '🖊️', '📏', '🖍️', ];
     
     // Elegir un producto al azar
     const emojiAzar = productos[Math.floor(Math.random() * productos.length)];
