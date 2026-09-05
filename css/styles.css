@@ -422,24 +422,23 @@ form input:focus, form select:focus, form textarea:focus {
         padding: 2rem 0;
     }
 }
-/* --- Efecto Interactivo de Chispas en el Cursor --- */
-.cursor-spark {
+/* --- Efecto Interactivo de Mini Productos en el Cursor --- */
+.cursor-product {
     position: absolute;
-    /* Usa el azul de tu variable --primary-color y un todo celeste brillante */
-    background: radial-gradient(circle, var(--primary-color) 0%, #0dcaf0 100%);
-    border-radius: 50%;
-    pointer-events: none; /* Permite hacer clic en la página sin interrupciones */
+    pointer-events: none; /* Permite hacer clics normalmente */
     z-index: 9999;
-    animation: sparkFade 0.8s forwards linear;
+    user-select: none;
+    animation: productFloat 0.9s forwards ease-out;
 }
 
-@keyframes sparkFade {
+@keyframes productFloat {
     0% {
         opacity: 1;
-        transform: translate(-50%, -50%) scale(1);
+        transform: translate(-50%, -50%) scale(1) rotate(0deg);
     }
     100% {
         opacity: 0;
-        transform: translate(-50%, 15px) scale(0.2);
+        /* El mini producto flota un poco hacia arriba, se encoge y se desvanece */
+        transform: translate(-50%, -30px) scale(0.4) rotate(15deg);
     }
 }

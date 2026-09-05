@@ -133,7 +133,7 @@
   {
     "id": 13,
     "codigo": "PRI-113",
-    "nombre": "Grapa Trabajo Pesado T50 - 8 Mm - 1000 unidades",
+    "nombre": "Grapadora Trabajo Pesado T50 - 8 Mm - 1000 unidades",
     "categoria": "Insumos",
     "precio": 3690,
     "stock": 115,
@@ -145,7 +145,7 @@
   {
     "id": 14,
     "codigo": "PRI-114",
-    "nombre": "Notas Adhesivas Amarillo 75x75cm Torre 100Hj",
+    "nombre": "Notas Adhesivas Amarillo 7.5x7.5cm Torre 100Hj",
     "categoria": "Insumos",
     "precio": 3490,
     "stock": 120,
@@ -169,7 +169,7 @@
   {
     "id": 16,
     "codigo": "PRI-116",
-    "nombre": "Limpiapisos Líquido Kleine Wolke 5 Litros para Todo Tipo de Piso",
+    "nombre": "Limpia pisos Líquido Kleine Wolke 5 Litros para Todo Tipo de Piso",
     "categoria": "Aseo y Limpieza",
     "precio": 4490,
     "stock": 130,

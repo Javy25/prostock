@@ -270,24 +270,30 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 }); 
-/* --- Efecto Interactivo de Chispas en el Cursor --- */
+// EFECTO INTERACTIVO: Estela de mini productos de papelería al mover el mouse
 document.addEventListener('mousemove', function(e) {
-    const spark = document.createElement('div');
-    spark.className = 'cursor-spark';
+    // Arreglo con íconos de papelería e insumos de oficina
+    const productos = ['✏️', '📓', '✂️', '📎', '🖊️', '📏', '🖍️', '📌'];
     
-    // Posiciona la chispa donde está el mouse
-    spark.style.left = e.pageX + 'px';
-    spark.style.top = e.pageY + 'px';
+    // Elegir un producto al azar
+    const emojiAzar = productos[Math.floor(Math.random() * productos.length)];
     
-    // Tamaño aleatorio para que se vea natural
-    const size = Math.random() * 8 + 4;
-    spark.style.width = size + 'px';
-    spark.style.height = size + 'px';
+    const item = document.createElement('div');
+    item.className = 'cursor-product';
+    item.textContent = emojiAzar;
     
-    document.body.appendChild(spark);
+    // Posicionar en las coordenadas exactas del puntero
+    item.style.left = e.pageX + 'px';
+    item.style.top = e.pageY + 'px';
     
-    // Borra la chispa después de 0.8 segundos para no llenar la memoria
+    // Ligera variación de tamaño para darle dinamismo
+    const size = Math.random() * 8 + 14; // Tamaño entre 14px y 22px
+    item.style.fontSize = size + 'px';
+    
+    document.body.appendChild(item);
+    
+    // Eliminar el elemento tras la animación
     setTimeout(() => {
-        spark.remove();
-    }, 800);
+        item.remove();
+    }, 900);
 });
