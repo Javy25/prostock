@@ -15,38 +15,54 @@
   {
     "id": 2,
     "codigo": "PRI-102",
-    "nombre": "Lápiz Pasta Azul (Pack 12u)",
+    "nombre": "Caja 12 Lápices Tinta Gel 100% Borrable Azul",
     "categoria": "Escolar",
     "precio": 2490,
     "stock": 80,
-    "imagen": "https://cdnx.jumpseller.com/libreria-mabeduna1/image/72740802/mabeduna_bic-caja-lapiz-pasta-12-unidades-azul-punta-fina.jpg?1770264334"
+    "imagen": "https://media.falabella.com/falabellaCL/147027254_01/w=1500,h=1500,fit=cover",
+    "imagenes": [
+      "https://media.falabella.com/falabellaCL/147027254_01/w=1500,h=1500,fit=cover", 
+      "https://media.falabella.com/falabellaCL/147027254_02/w=1500,h=1500,fit=cover"
+    ]
   },
   {
     "id": 3,
     "codigo": "PRI-103",
-    "nombre": "Corchetera Metálica Uso Rudo",
+    "nombre": "Corchetera Metálica Heavy Duty 210Hj Adix",
     "categoria": "Papelería y Oficina",
     "precio": 5990,
     "stock": 45,
-    "imagen": "https://www.dipy.cl/cdn/shop/files/cl_558920_1_700x.jpg?v=1752549005"
+    "imagen": "https://media.falabella.com/falabellaCL/147949530_01/w=1500,h=1500,fit=cover",
+    "imagenes": [
+      "https://media.falabella.com/falabellaCL/147949530_01/w=1500,h=1500,fit=cover",
+      "https://media.falabella.com/falabellaCL/147949530_02/w=1500,h=1500,fit=cover"
+    ]
   },
   {
     "id": 4,
     "codigo": "PRI-104",
-    "nombre": "Cuaderno Universitario 100 Hojas",
+    "nombre": "Cuaderno Siete Colores tapa dura 100 hojas",
     "categoria": "Escolar",
     "precio": 1990,
     "stock": 200,
-    "imagen": "https://images.unsplash.com/photo-1456324504439-367cee3b3c32?w=700&q=85"
+    "imagen": "https://media.falabella.com/falabellaCL/155554546_01/w=1500,h=1500,fit=cover",
+    "imagenes": [
+      "https://media.falabella.com/falabellaCL/155554546_01/w=1500,h=1500,fit=cover",
+      "https://media.falabella.com/falabellaCL/155554546_02/w=1500,h=1500,fit=cover"
+    ]
   },
   {
     "id": 5,
     "codigo": "PRI-105",
-    "nombre": "Perforadora de Papel 2 Orificios",
+    "nombre": "Perforadora Metal 60 hojas Kangaro Negra",
     "categoria": "Papelería y Oficina",
     "precio": 4490,
     "stock": 30,
-    "imagen": "https://images.unsplash.com/photo-1524758631624-e2822e304c36?w=700&q=85"
+    "imagen": "https://media.falabella.com/falabellaCL/147843655_01/w=1500,h=1500,fit=cover",
+    "imagenes": [
+      "https://media.falabella.com/falabellaCL/147843655_01/w=1500,h=1500,fit=cover",
+      "https://media.falabella.com/falabellaCL/147843655_02/w=1500,h=1500,fit=cover"
+    ]
   },
   {
     "id": 6,
