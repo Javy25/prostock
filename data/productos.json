@@ -107,38 +107,46 @@
   {
     "id": 10,
     "codigo": "PRI-110",
-    "nombre": "Alcohol Gel 500ml con Dosificador",
+    "nombre": "Dispensador De Jabon Liquido Alcohol Gel Shampo 500ml Blanco",
     "categoria": "Aseo y Limpieza",
     "precio": 2990,
     "stock": 120,
-    "imagen": "https://images.unsplash.com/photo-1584744982491-665216d95f8b?w=700&q=85"
+    "imagen": "https://media.falabella.com/falabellaCL/150687553_01/w=1500,h=1500,fit=cover",
+    "imagenes": [
+      "https://media.falabella.com/falabellaCL/150687553_01/w=1500,h=1500,fit=cover",
+      "https://media.falabella.com/falabellaCL/150687553_02/w=1500,h=1500,fit=cover"
+    ]
   },
   {
     "id": 11,
     "codigo": "PRI-111",
-    "nombre": "Notas Adhesivas 76x76mm (Pack 3u)",
+    "nombre": "Nota Adhesivas 7x7 Cm 100 Hojas",
     "categoria": "Papelería y Oficina",
     "precio": 1590,
     "stock": 180,
-    "imagen": "https://images.unsplash.com/photo-1499951360447-b19be8fe80f5?w=700&q=85"
+    "imagen": "https://media.falabella.com/falabellaCL/139666063_01/w=1500,h=1500,fit=cover"
   },
   {
     "id": 12,
     "codigo": "PRI-112",
-    "nombre": "Marcadores Pizarra Acrílica (Pack 4u)",
+    "nombre": "Set de 9 Marcadores",
     "categoria": "Escolar",
     "precio": 3790,
     "stock": 75,
-    "imagen": "https://images.unsplash.com/photo-1526948128573-703ee1aeb6fa?w=700&q=85"
+    "imagen": "https://media.falabella.com/falabellaCL/144768053_01/w=1500,h=1500,fit=cover"
   },
   {
     "id": 13,
     "codigo": "PRI-113",
-    "nombre": "Pizarra Blanca Magnética 60x90cm",
+    "nombre": "Pizarra magnética 60x80 cm Blanco",
     "categoria": "Papelería y Oficina",
     "precio": 18990,
     "stock": 24,
-    "imagen": "https://images.unsplash.com/photo-1556761175-b413da4baf72?w=700&q=85"
+    "imagen": "https://media.falabella.com/sodimacCL/2110059_01/w=1500,h=1500,fit=cover",
+    "imagenes": [
+      "https://media.falabella.com/sodimacCL/2110059_01/w=1500,h=1500,fit=cover",
+      "https://media.falabella.com/sodimacCL/2110059_02/w=1500,h=1500,fit=cover"
+    ]
   },
   {
     "id": 14,
@@ -147,7 +155,7 @@
     "categoria": "Escolar",
     "precio": 5490,
     "stock": 65,
-    "imagen": "https://images.unsplash.com/photo-1513364776144-60967b0f800f?w=700&q=85"
+    "imagen": "https://media.falabella.com/sodimacCL/2110059_01/w=1500,h=1500,fit=cover"
   },
   {
     "id": 15,
