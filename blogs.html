@@ -71,8 +71,9 @@
             
             <!-- Artículo 1 -->
             <article class="col-md-6 col-lg-4 blog-item" data-category="Consejos">
-                <div class="card h-100 border-0 shadow-sm hover-shadow transition-all">
+                <div class="card blog-card h-100 border-0 shadow-sm">
                     <img src="https://images.unsplash.com/photo-1497215728101-856f4ea42174?w=500&q=80" class="card-img-top object-fit-cover" height="200" alt="Oficina organizada con insumos y papelería">
+                    
                     <div class="card-body d-flex flex-column">
                         <div class="mb-2">
                             <span class="badge bg-primary text-wrap">Consejos</span>
@@ -86,13 +87,26 @@
                             <time datetime="2026-05-12">12 de Mayo, 2026</time>
                         </div>
                     </div>
+
+                    <!-- Capa desplegable al hacer Hover -->
+                    <div class="blog-overlay p-4 d-flex flex-column justify-content-between text-white">
+                        <div>
+                            <span class="badge bg-light text-primary mb-2">Consejos</span>
+                            <h3 class="h5 fw-bold text-white mb-2">5 Tips para Organizar el Inventario de tu Oficina</h3>
+                            <p class="small text-white-50">Aprende a gestionar el stock de papelería e insumos en Prostock para evitar pérdidas y mantener un control eficiente.</p>
+                        </div>
+                        <div class="border-top border-white-50 pt-2 text-white-50 small">
+                            <i class="bi bi-calendar3 me-1"></i> 12 de Mayo, 2026
+                        </div>
+                    </div>
                 </div>
             </article>
 
             <!-- Artículo 2 -->
             <article class="col-md-6 col-lg-4 blog-item" data-category="Guías">
-                <div class="card h-100 border-0 shadow-sm hover-shadow transition-all">
+                <div class="card blog-card h-100 border-0 shadow-sm">
                     <img src="https://images.unsplash.com/photo-1456735190827-d1262f71b8a3?w=500&q=80" class="card-img-top object-fit-cover" height="200" alt="Materiales escolares sobre escritorio">
+                    
                     <div class="card-body d-flex flex-column">
                         <div class="mb-2">
                             <span class="badge bg-success text-wrap">Guías</span>
@@ -106,13 +120,26 @@
                             <time datetime="2026-06-02">02 de Junio, 2026</time>
                         </div>
                     </div>
+
+                    <!-- Capa desplegable al hacer Hover -->
+                    <div class="blog-overlay p-4 d-flex flex-column justify-content-between text-white">
+                        <div>
+                            <span class="badge bg-light text-success mb-2">Guías</span>
+                            <h3 class="h5 fw-bold text-white mb-2">Checklist de Útiles Escolares Esenciales</h3>
+                            <p class="small text-white-50">Descubre la lista definitiva de materiales necesarios para maximizar el rendimiento escolar.</p>
+                        </div>
+                        <div class="border-top border-white-50 pt-2 text-white-50 small">
+                            <i class="bi bi-calendar3 me-1"></i> 02 de Junio, 2026
+                        </div>
+                    </div>
                 </div>
             </article>
 
             <!-- Artículo 3 -->
             <article class="col-md-6 col-lg-4 blog-item" data-category="Sustentabilidad">
-                <div class="card h-100 border-0 shadow-sm hover-shadow transition-all">
+                <div class="card blog-card h-100 border-0 shadow-sm">
                     <img src="https://images.unsplash.com/photo-1586075010923-2dd4570fb338?w=500&q=80" class="card-img-top object-fit-cover" height="200" alt="Papel reciclado e insumos ecológicos">
+                    
                     <div class="card-body d-flex flex-column">
                         <div class="mb-2">
                             <span class="badge bg-info text-dark text-wrap">Sustentabilidad</span>
@@ -124,6 +151,18 @@
                         <div class="d-flex align-items-center gap-2 mt-3 pt-3 border-top text-muted small">
                             <i class="bi bi-calendar3"></i>
                             <time datetime="2026-07-20">20 de Julio, 2026</time>
+                        </div>
+                    </div>
+
+                    <!-- Capa desplegable al hacer Hover -->
+                    <div class="blog-overlay p-4 d-flex flex-column justify-content-between text-white">
+                        <div>
+                            <span class="badge bg-light text-dark mb-2">Sustentabilidad</span>
+                            <h3 class="h5 fw-bold text-white mb-2">El Impacto del Uso Responsable del Papel</h3>
+                            <p class="small text-white-50">Buenas prácticas para reducir el consumo y reciclar insumos de oficina en tu empresa.</p>
+                        </div>
+                        <div class="border-top border-white-50 pt-2 text-white-50 small">
+                            <i class="bi bi-calendar3 me-1"></i> 20 de Julio, 2026
                         </div>
                     </div>
                 </div>
@@ -144,84 +183,3 @@
     <script src="js/main.js"></script>
 </body>
 </html> 
-<!-- Botones de Filtro -->
-<div class="home-category-tabs mb-4">
-    <button class="home-category-tab active" data-category="Todos">Todos</button>
-    <button class="home-category-tab" data-category="Consejos">Consejos</button>
-    <button class="home-category-tab" data-category="Guías">Guías</button>
-    <button class="home-category-tab" data-category="Sustentabilidad">Sustentabilidad</button>
-</div>
-
-<!-- Tarjetas con overlay desplegable -->
-<section class="row g-4" id="blog-articles">
-    
-    <!-- Artículo 1 -->
-    <article class="col-md-6 col-lg-4 blog-item" data-category="Consejos">
-        <div class="card blog-card h-100 border-0 shadow-sm">
-            <img src="https://images.unsplash.com/photo-1497215728101-856f4ea42174?w=500&q=80" class="card-img-top object-fit-cover" height="260" alt="Oficina organizada con insumos y papelería">
-            
-            <div class="card-body p-3">
-                <span class="badge bg-primary w-fit-content mb-2">Consejos</span>
-                <h2 class="card-title h6 fw-bold mb-0 text-dark">5 Tips para Organizar el Inventario de tu Oficina</h2>
-            </div>
-
-            <div class="blog-overlay p-4 d-flex flex-column justify-content-between text-white">
-                <div>
-                    <span class="badge bg-light text-primary mb-2">Consejos</span>
-                    <h3 class="h5 fw-bold text-white mb-2">5 Tips para Organizar el Inventario de tu Oficina</h3>
-                    <p class="small text-white-50">Aprende a gestionar el stock de papelería e insumos en Prostock para evitar pérdidas y mantener un control eficiente.</p>
-                </div>
-                <div class="border-top border-white-50 pt-2 text-white-50 small">
-                    <i class="bi bi-calendar3 me-1"></i> 12 de Mayo, 2026
-                </div>
-            </div>
-        </div>
-    </article>
-
-    <!-- Artículo 2 -->
-    <article class="col-md-6 col-lg-4 blog-item" data-category="Guías">
-        <div class="card blog-card h-100 border-0 shadow-sm">
-            <img src="https://images.unsplash.com/photo-1456735190827-d1262f71b8a3?w=500&q=80" class="card-img-top object-fit-cover" height="260" alt="Materiales escolares sobre escritorio">
-            
-            <div class="card-body p-3">
-                <span class="badge bg-success w-fit-content mb-2">Guías</span>
-                <h2 class="card-title h6 fw-bold mb-0 text-dark">Checklist de Útiles Escolares Esenciales</h2>
-            </div>
-
-            <div class="blog-overlay p-4 d-flex flex-column justify-content-between text-white">
-                <div>
-                    <span class="badge bg-light text-success mb-2">Guías</span>
-                    <h3 class="h5 fw-bold text-white mb-2">Checklist de Útiles Escolares Esenciales</h3>
-                    <p class="small text-white-50">Descubre la lista definitiva de materiales necesarios para maximizar el rendimiento escolar.</p>
-                </div>
-                <div class="border-top border-white-50 pt-2 text-white-50 small">
-                    <i class="bi bi-calendar3 me-1"></i> 02 de Junio, 2026
-                </div>
-            </div>
-        </div>
-    </article>
-
-    <!-- Artículo 3 -->
-    <article class="col-md-6 col-lg-4 blog-item" data-category="Sustentabilidad">
-        <div class="card blog-card h-100 border-0 shadow-sm">
-            <img src="https://images.unsplash.com/photo-1586075010923-2dd4570fb338?w=500&q=80" class="card-img-top object-fit-cover" height="260" alt="Papel reciclado e insumos ecológicos">
-            
-            <div class="card-body p-3">
-                <span class="badge bg-info text-dark w-fit-content mb-2">Sustentabilidad</span>
-                <h2 class="card-title h6 fw-bold mb-0 text-dark">El Impacto del Uso Responsable del Papel</h2>
-            </div>
-
-            <div class="blog-overlay p-4 d-flex flex-column justify-content-between text-white">
-                <div>
-                    <span class="badge bg-light text-dark mb-2">Sustentabilidad</span>
-                    <h3 class="h5 fw-bold text-white mb-2">El Impacto del Uso Responsable del Papel</h3>
-                    <p class="small text-white-50">Buenas prácticas para reducir el consumo y reciclar insumos de oficina en tu empresa.</p>
-                </div>
-                <div class="border-top border-white-50 pt-2 text-white-50 small">
-                    <i class="bi bi-calendar3 me-1"></i> 20 de Julio, 2026
-                </div>
-            </div>
-        </div>
-    </article>
-
-</section>

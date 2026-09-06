@@ -20,7 +20,7 @@ async function cargarProductos() {
         productosGlobales = JSON.parse(localStorage.getItem('productos_db')) || [
             { id: 1, codigo: "PRI-101", nombre: "Resma Papel A4 75g", categoria: "Papelería y Oficina", precio: 3990, stock: 150, imagen: "https://images.unsplash.com/photo-1586075010923-2dd4570fb338?w=500&q=80" },
             { id: 2, codigo: "PRI-102", nombre: "Lápiz Pasta Azul (12u)", categoria: "Escolar", precio: 2490, stock: 80, imagen: "https://images.unsplash.com/photo-1585336261026-8f5786372966?w=500&q=80" },
-            { id: 3, codigo: "PRI-103", nombre: "Corchetera Metálica Uso Rudo", categoria:"Papelería y Oficina", precio:  5990, stock: 80, imagen: "https://images.unsplash.com/photo-1544816155-12df9643f363?w=500&q=80" }
+            { id: 3, codigo: "PRI-103", nombre: "Corchetera Metálica Uso Rudo", categoria:"Papelería y Oficina", precio: 5990, stock: 80, imagen: "https://images.unsplash.com/photo-1544816155-12df9643f363?w=500&q=80" }
         ];
     }
     
@@ -228,6 +228,7 @@ function configurarFiltrosYBuscador() {
     if (filtroCategoria) filtroCategoria.addEventListener('change', aplicarFiltros);
 }
 
+// Filtros y Buscador del Blog
 document.addEventListener('DOMContentLoaded', () => {
     const filterButtons = document.querySelectorAll('#filter-buttons .btn');
     const blogItems = document.querySelectorAll('.blog-item');
@@ -253,6 +254,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         });
     }
+
     if (searchInput) {
         searchInput.addEventListener('input', (e) => {
             const busqueda = e.target.value.toLowerCase().trim();
@@ -269,27 +271,4 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         });
     }
-}); 
-document.addEventListener('DOMContentLoaded', () => {
-    const categoryButtons = document.querySelectorAll('.home-category-tab');
-    const blogItems = document.querySelectorAll('.blog-item');
-
-    categoryButtons.forEach(button => {
-        button.addEventListener('click', () => {
-            categoryButtons.forEach(btn => btn.classList.remove('active'));
-            button.classList.add('active');
-
-            const selectedCategory = button.getAttribute('data-category');
-
-            blogItems.forEach(item => {
-                const itemCategory = item.getAttribute('data-category');
-
-                if (selectedCategory === 'Todos' || itemCategory === selectedCategory) {
-                    item.classList.remove('d-none');
-                } else {
-                    item.classList.add('d-none');
-                }
-            });
-        });
-    });
 });
