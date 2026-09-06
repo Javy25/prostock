@@ -422,7 +422,7 @@ form input:focus, form select:focus, form textarea:focus {
         padding: 2rem 0;
     }
 } 
-/* Efecto desplegable para tarjetas de Blog */
+/* Sección de Blog con desplegable al hover */
 .blog-card {
     overflow: hidden;
     position: relative;
