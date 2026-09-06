@@ -270,30 +270,26 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 }); 
-// EFECTO INTERACTIVO: Estela de mini productos de papelería al mover el mouse
-document.addEventListener('mousemove', function(e) {
-    // Arreglo con íconos de papelería e insumos de oficina
-    const productos = ['✏️', '📓', '✂️', '🖊️', '📏', '🖍️', ];
-    
-    // Elegir un producto al azar
-    const emojiAzar = productos[Math.floor(Math.random() * productos.length)];
-    
-    const item = document.createElement('div');
-    item.className = 'cursor-product';
-    item.textContent = emojiAzar;
-    
-    // Posicionar en las coordenadas exactas del puntero
-    item.style.left = e.pageX + 'px';
-    item.style.top = e.pageY + 'px';
-    
-    // Ligera variación de tamaño para darle dinamismo
-    const size = Math.random() * 8 + 14; // Tamaño entre 14px y 22px
-    item.style.fontSize = size + 'px';
-    
-    document.body.appendChild(item);
-    
-    // Eliminar el elemento tras la animación
-    setTimeout(() => {
-        item.remove();
-    }, 900);
+document.addEventListener('DOMContentLoaded', () => {
+    const categoryButtons = document.querySelectorAll('.home-category-tab');
+    const blogItems = document.querySelectorAll('.blog-item');
+
+    categoryButtons.forEach(button => {
+        button.addEventListener('click', () => {
+            categoryButtons.forEach(btn => btn.classList.remove('active'));
+            button.classList.add('active');
+
+            const selectedCategory = button.getAttribute('data-category');
+
+            blogItems.forEach(item => {
+                const itemCategory = item.getAttribute('data-category');
+
+                if (selectedCategory === 'Todos' || itemCategory === selectedCategory) {
+                    item.classList.remove('d-none');
+                } else {
+                    item.classList.add('d-none');
+                }
+            });
+        });
+    });
 });
