@@ -1,6 +1,7 @@
 let productosGlobales = [];
 
 document.addEventListener('DOMContentLoaded', () => {
+    asegurarAdministradorInicial();
     actualizarContadorCarrito();
     verificarEstadoSesion();
     configurarPerfil();
@@ -9,6 +10,20 @@ document.addEventListener('DOMContentLoaded', () => {
         cargarProductos();
     }
 });
+
+function asegurarAdministradorInicial() {
+    const usuarios = JSON.parse(localStorage.getItem('usuarios_db')) || [];
+    if (usuarios.some(usuario => usuario.email === 'admin@duoc.cl')) return;
+
+    usuarios.push({
+        id: 999,
+        nombre: 'Administrador Prostock',
+        email: 'admin@duoc.cl',
+        password: 'admin123',
+        rol: 'ADMIN'
+    });
+    localStorage.setItem('usuarios_db', JSON.stringify(usuarios));
+}
 
 function escaparHTML(valor) {
     const elemento = document.createElement('div');
@@ -49,14 +64,23 @@ function configurarPerfil() {
     `).join('') : '<tr><td colspan="4" class="text-center text-muted py-4">Aún no tienes compras registradas.</td></tr>';
 }
 
-// Carga productos desde /data/productos.json o localStorage
+// Inicializa productos_db desde JSON una sola vez y luego usa el inventario local.
 async function cargarProductos() {
+    const productosGuardados = localStorage.getItem('productos_db');
+    if (productosGuardados) {
+        productosGlobales = JSON.parse(productosGuardados);
+        renderizarCatalogo(productosGlobales);
+        renderizarPatrocinados(productosGlobales.slice(0, 8));
+        configurarCategoriasInicio();
+        configurarFiltrosYBuscador();
+        return;
+    }
+
     try {
         const res = await fetch('data/productos.json');
         if (!res.ok) throw new Error('No se pudo cargar data/productos.json');
         productosGlobales = await res.json();
     } catch (e) {
-        // Fallback a localStorage si ya fue modificado por el Admin
         productosGlobales = JSON.parse(localStorage.getItem('productos_db')) || [
             { id: 1, codigo: "PRI-101", nombre: "Resma Papel A4 75g", categoria: "Papelería y Oficina", precio: 3990, stock: 150, imagen: "https://images.unsplash.com/photo-1586075010923-2dd4570fb338?w=500&q=80" },
             { id: 2, codigo: "PRI-102", nombre: "Lápiz Pasta Azul (12u)", categoria: "Escolar", precio: 2490, stock: 80, imagen: "https://images.unsplash.com/photo-1585336261026-8f5786372966?w=500&q=80" },
@@ -64,21 +88,7 @@ async function cargarProductos() {
         ];
     }
     
-    // Guardar en localStorage para sincronizar con la zona Admin
-    if (!localStorage.getItem('productos_db')) {
-        localStorage.setItem('productos_db', JSON.stringify(productosGlobales));
-    } else {
-        const productosGuardados = JSON.parse(localStorage.getItem('productos_db'));
-        productosGlobales = productosGuardados.map(productoGuardado => {
-            const productoActual = productosGlobales.find(producto => producto.id === productoGuardado.id);
-            return productoActual ? {
-                ...productoGuardado,
-                imagen: productoActual.imagen,
-                ...(productoActual.imagenes ? { imagenes: productoActual.imagenes } : {})
-            } : productoGuardado;
-        });
-        localStorage.setItem('productos_db', JSON.stringify(productosGlobales));
-    }
+    localStorage.setItem('productos_db', JSON.stringify(productosGlobales));
 
     renderizarCatalogo(productosGlobales);
     renderizarPatrocinados(productosGlobales.slice(0, 8));
@@ -164,16 +174,15 @@ function renderizarCatalogo(lista) {
             const div = document.createElement('div');
             div.className = 'col-sm-6 col-lg-4 col-xl-3';
             div.innerHTML = `
-                <div class="card h-100 shadow-sm border-0">
-                        <img src="${escaparHTML(prod.imagen)}" class="card-img-top" alt="${escaparHTML(prod.nombre)}" style="height: 180px; object-fit: cover;">
+                <div class="card h-100 shadow-sm border-0 product-card" role="link" tabindex="0" onclick="window.location.href='detalle-producto.html?id=${Number(prod.id)}'" onkeydown="if (event.key === 'Enter') window.location.href='detalle-producto.html?id=${Number(prod.id)}'">
+                    <img src="${escaparHTML(prod.imagen)}" class="card-img-top" alt="${escaparHTML(prod.nombre)}" style="height: 180px; object-fit: cover;">
                     <div class="card-body d-flex flex-column">
                         <small class="text-muted fw-bold">CÓD: ${escaparHTML(prod.codigo)}</small>
                         <h6 class="card-title fw-bold my-1">${escaparHTML(prod.nombre)}</h6>
                         <div class="mt-auto d-flex justify-content-between align-items-center">
                             <span class="fs-5 fw-bold text-primary">$${prod.precio.toLocaleString('es-CL')}</span>
-                            <a href="detalle-producto.html?id=${Number(prod.id)}" class="btn btn-sm btn-outline-primary">Ver Ficha</a>
                         </div>
-                        <button onclick="agregarAlCarrito(${prod.id})" class="btn btn-danger btn-sm w-100 mt-2">
+                        <button onclick="event.stopPropagation(); agregarAlCarrito(${prod.id})" class="btn btn-danger btn-sm w-100 mt-2">
                             <i class="bi bi-cart-plus me-1"></i> Agregar
                         </button>
                     </div>
@@ -186,11 +195,23 @@ function renderizarCatalogo(lista) {
 }
 
 function agregarAlCarrito(id) {
-    const producto = productosGlobales.find(p => p.id === id);
+    const productosDisponibles = productosGlobales.length
+        ? productosGlobales
+        : JSON.parse(localStorage.getItem('productos_db')) || [];
+    const producto = productosDisponibles.find(p => p.id === id);
     if (!producto) return;
 
     let carrito = JSON.parse(localStorage.getItem('carrito')) || [];
     const itemExistente = carrito.find(i => i.id === id);
+
+    if (producto.stock <= 0) {
+        alert('Este producto no tiene stock disponible.');
+        return;
+    }
+    if (itemExistente && itemExistente.cantidad >= producto.stock) {
+        alert(`Solo hay ${producto.stock} unidades disponibles.`);
+        return;
+    }
 
     if (itemExistente) {
         itemExistente.cantidad += 1;

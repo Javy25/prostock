@@ -54,8 +54,10 @@ function configurarFormularioRegistro() {
         const email = document.getElementById('email').value.trim().toLowerCase();
         const password = document.getElementById('password').value;
         const confirmPassword = document.getElementById('confirmPassword').value;
+        const run = document.getElementById('run').value.trim();
         const region = document.getElementById('select-region')?.value || '';
         const comuna = document.getElementById('select-comuna')?.value || '';
+        const direccion = document.getElementById('direccion').value.trim();
 
         // Reglas de Validación Duoc/Profesor/Gmail y Contraseña
         const dominiosPermitidos = ['@duoc.cl', '@profesor.duoc.cl', '@gmail.com'];
@@ -87,8 +89,10 @@ function configurarFormularioRegistro() {
             nombre,
             email,
             password,
+            run,
             region,
             comuna,
+            direccion,
             rol: 'CLIENTE'
         };
 
@@ -108,14 +112,6 @@ function configurarFormularioLogin() {
         e.preventDefault();
         const email = document.getElementById('login-email').value.trim().toLowerCase();
         const password = document.getElementById('login-pass').value;
-
-        // Usuario Administrador por defecto si no existe ninguno
-        if (email === 'admin@duoc.cl' && password === 'admin123') {
-            const adminUser = { id: 999, nombre: 'Administrador Prostock', email, rol: 'ADMIN' };
-            localStorage.setItem('usuarioActivo', JSON.stringify(adminUser));
-            window.location.href = 'admin/index.html';
-            return;
-        }
 
         const usuarios = JSON.parse(localStorage.getItem('usuarios_db')) || [];
         const usuarioValido = usuarios.find(u => u.email === email && u.password === password);

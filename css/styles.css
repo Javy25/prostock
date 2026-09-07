@@ -314,6 +314,15 @@ main {
     transform: scale(1.03);
 }
 
+.product-card {
+    cursor: pointer;
+}
+
+.product-card:focus-visible {
+    outline: 3px solid #0d6efd;
+    outline-offset: 3px;
+}
+
 .product-carousel {
     background: #f7f9fc;
     border-radius: 0.5rem;

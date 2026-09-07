@@ -24,6 +24,7 @@
                     <a href="index.html" class="list-group-item list-group-item-action active">Dashboard</a>
                     <a href="productos-listar.html" class="list-group-item list-group-item-action">Productos</a>
                     <a href="usuarios-listar.html" class="list-group-item list-group-item-action">Usuarios</a>
+                    <a href="mensajes-listar.html" class="list-group-item list-group-item-action">Mensajes</a>
                 </div>
             </div>
 
@@ -67,6 +68,30 @@
                             </div>
                         </div>
                     </div>
+                    <div class="col-md-4">
+                        <div class="card border-0 shadow-sm bg-info text-dark p-3">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div><h6 class="text-uppercase mb-1">Pedidos</h6><h2 id="dash-cant-pedidos" class="mb-0">0</h2></div>
+                                <i class="bi bi-bag-check fs-1"></i>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card border-0 shadow-sm bg-secondary text-white p-3">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div><h6 class="text-uppercase mb-1">Mensajes pendientes</h6><h2 id="dash-cant-mensajes" class="mb-0">0</h2></div>
+                                <i class="bi bi-envelope fs-1"></i>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card border-0 shadow-sm bg-dark text-white p-3">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div><h6 class="text-uppercase mb-1">Ventas totales</h6><h2 id="dash-ventas" class="mb-0">$0</h2></div>
+                                <i class="bi bi-cash-stack fs-1"></i>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -77,9 +102,14 @@
         document.addEventListener('DOMContentLoaded', () => {
             const productos = JSON.parse(localStorage.getItem('productos_db')) || [];
             const usuarios = JSON.parse(localStorage.getItem('usuarios_db')) || [];
+            const pedidos = JSON.parse(localStorage.getItem('pedidos_db')) || [];
+            const mensajes = JSON.parse(localStorage.getItem('mensajes_contacto_db')) || [];
 
             document.getElementById('dash-cant-productos').textContent = productos.length;
             document.getElementById('dash-cant-usuarios').textContent = usuarios.length;
+            document.getElementById('dash-cant-pedidos').textContent = pedidos.length;
+            document.getElementById('dash-cant-mensajes').textContent = mensajes.filter(mensaje => !mensaje.atendido).length;
+            document.getElementById('dash-ventas').textContent = `$${pedidos.reduce((total, pedido) => total + Number(pedido.total || 0), 0).toLocaleString('es-CL')}`;
         });
     </script>
 </body>

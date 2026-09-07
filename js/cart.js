@@ -16,7 +16,7 @@ function renderizarCarrito() {
     if (carrito.length === 0) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="6" class="text-center py-4 text-muted">
+                <td colspan="5" class="text-center py-4 text-muted">
                     El carrito está vacío. <a href="productos.html">Ver productos</a>
                 </td>
             </tr>`;
@@ -67,6 +67,14 @@ function renderizarCarrito() {
 
 function cambiarCantidad(index, cambio) {
     let carrito = JSON.parse(localStorage.getItem('carrito')) || [];
+    const item = carrito[index];
+    if (!item) return;
+    const productos = JSON.parse(localStorage.getItem('productos_db')) || [];
+    const producto = productos.find(itemProducto => itemProducto.id === item.id);
+    if (cambio > 0 && (!producto || item.cantidad >= producto.stock)) {
+        alert(`Solo hay ${producto?.stock || 0} unidades disponibles.`);
+        return;
+    }
     carrito[index].cantidad += cambio;
 
     if (carrito[index].cantidad <= 0) {

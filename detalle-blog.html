@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prostock - Organiza el inventario de tu oficina</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body class="d-flex flex-column min-vh-100 bg-light">
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark sticky-top">
+        <div class="container">
+            <a class="navbar-brand" href="index.html"><img src="img/logo-prostock.svg" class="brand-logo" alt="Prostock"></a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-label="Navegación principal"><span class="navbar-toggler-icon"></span></button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item"><a class="nav-link" href="index.html">Inicio</a></li>
+                    <li class="nav-item"><a class="nav-link" href="productos.html">Productos</a></li>
+                    <li class="nav-item"><a class="nav-link" href="nosotros.html">Nosotros</a></li>
+                    <li class="nav-item"><a class="nav-link active" href="blogs.html">Blog</a></li>
+                    <li class="nav-item"><a class="nav-link" href="contacto.html">Contacto</a></li>
+                </ul>
+                <div class="d-flex align-items-center gap-3"><a href="carrito.html" class="btn btn-outline-light position-relative" aria-label="Carrito de compras"><i class="bi bi-cart3"></i><span id="cart-count" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">0</span></a><div id="user-navbar-info" class="text-white small"></div></div>
+            </div>
+        </div>
+    </nav>
+    <main class="container my-5 flex-grow-1">
+        <article class="row justify-content-center">
+            <div class="col-lg-8">
+                <a href="blogs.html" class="text-decoration-none"><i class="bi bi-arrow-left"></i> Volver al blog</a>
+                <p class="text-primary text-uppercase small fw-bold mt-4 mb-2">Consejos</p>
+                <h1 class="fw-bold mb-3">5 Tips para Organizar el Inventario de tu Oficina</h1>
+                <p class="text-muted"><i class="bi bi-calendar3 me-2"></i>12 de mayo de 2026</p>
+                <img src="https://images.unsplash.com/photo-1497215728101-856f4ea42174?w=1200&amp;q=80" class="img-fluid rounded shadow-sm my-4" alt="Oficina organizada con insumos y papelería">
+                <p>Un inventario ordenado reduce quiebres de stock, compras urgentes y pérdidas de materiales. Estas prácticas permiten mantener el control sin complejidad.</p>
+                <h2 class="h4 mt-4">1. Clasifica los insumos</h2><p>Ordena los productos según su frecuencia de uso y define responsables para los artículos críticos.</p>
+                <h2 class="h4 mt-4">2. Registra entradas y salidas</h2><p>Actualiza el inventario cada vez que recibas o entregues materiales. El registro oportuno evita diferencias con el stock físico.</p>
+                <h2 class="h4 mt-4">3. Define un stock mínimo</h2><p>Establece un límite de reposición por producto para anticipar las compras antes de quedarte sin unidades.</p>
+                <h2 class="h4 mt-4">4. Asigna una ubicación</h2><p>Etiqueta estantes y zonas de almacenamiento. Un lugar fijo facilita el recuento y reduce el tiempo de búsqueda.</p>
+                <h2 class="h4 mt-4">5. Realiza revisiones periódicas</h2><p>Contrasta el inventario registrado con el físico de forma mensual para detectar diferencias a tiempo.</p>
+            </div>
+        </article>
+    </main>
+    <footer class="bg-dark text-white text-center py-4"><p class="mb-0 small">&copy; 2026 Prostock Inc. Todos los derechos reservados.</p></footer>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html>

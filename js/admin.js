@@ -14,6 +14,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (document.getElementById('form-usuario-admin')) {
         configurarFormularioUsuario();
     }
+    if (document.getElementById('tabla-admin-mensajes')) {
+        listarMensajesAdmin();
+    }
 });
 
 function verificarRolAdmin() {
@@ -96,15 +99,33 @@ function configurarFormularioProducto() {
 
     document.getElementById('form-producto-admin').addEventListener('submit', (e) => {
         e.preventDefault();
+        const codigo = document.getElementById('prod-codigo').value.trim().toUpperCase();
+        const nombre = document.getElementById('prod-nombre').value.trim();
+        const precio = Number(document.getElementById('prod-precio').value);
+        const stock = Number(document.getElementById('prod-stock').value);
+        const imagenes = document.getElementById('prod-imagenes').value.split('\n').map(imagen => imagen.trim()).filter(Boolean);
+
+        if (!codigo || !nombre || precio <= 0 || stock < 0) {
+            alert('Ingresa código y nombre, un precio mayor a cero y un stock válido.');
+            return;
+        }
+        if (productos.some(producto => producto.codigo.toUpperCase() === codigo && producto.id != prodId)) {
+            alert('Ya existe un producto con ese código.');
+            return;
+        }
+        if (!imagenes.length) {
+            alert('Debes ingresar al menos una imagen.');
+            return;
+        }
         
         const nuevoProd = {
             id: prodId ? Number(prodId) : Date.now(),
-            codigo: document.getElementById('prod-codigo').value.trim(),
-            nombre: document.getElementById('prod-nombre').value.trim(),
+            codigo,
+            nombre,
             categoria: document.getElementById('prod-categoria').value,
-            precio: Number(document.getElementById('prod-precio').value),
-            stock: Number(document.getElementById('prod-stock').value),
-            imagenes: document.getElementById('prod-imagenes').value.split('\n').map(imagen => imagen.trim()).filter(Boolean)
+            precio,
+            stock,
+            imagenes
         };
 
         nuevoProd.imagen = nuevoProd.imagenes[0] || 'https://via.placeholder.com/150';
@@ -177,6 +198,7 @@ function configurarFormularioUsuario() {
         evento.preventDefault();
         const email = document.getElementById('usr-email').value.trim().toLowerCase();
         const password = document.getElementById('usr-password').value;
+        const confirmPassword = document.getElementById('usr-confirm-password').value;
         const dominiosPermitidos = ['@duoc.cl', '@profesor.duoc.cl', '@gmail.com'];
 
         if (!dominiosPermitidos.some(dominio => email.endsWith(dominio))) {
@@ -189,6 +211,14 @@ function configurarFormularioUsuario() {
         }
         if (!usuarioActual && !password) {
             alert('Debes definir una contraseña para el nuevo usuario.');
+            return;
+        }
+        if (password && (password.length < 4 || password.length > 10)) {
+            alert('La contraseña debe tener entre 4 y 10 caracteres.');
+            return;
+        }
+        if (password !== confirmPassword) {
+            alert('Las contraseñas no coinciden.');
             return;
         }
 
@@ -207,4 +237,39 @@ function configurarFormularioUsuario() {
         localStorage.setItem('usuarios_db', JSON.stringify(usuarios));
         window.location.href = 'usuarios-listar.html';
     });
+}
+
+function listarMensajesAdmin() {
+    const tbody = document.getElementById('tabla-admin-mensajes');
+    const mensajes = JSON.parse(localStorage.getItem('mensajes_contacto_db')) || [];
+    tbody.innerHTML = mensajes.length ? mensajes.map(mensaje => `
+        <tr>
+            <td>${escaparHTML(mensaje.nombre)}</td>
+            <td>${escaparHTML(mensaje.email)}</td>
+            <td>${escaparHTML(mensaje.asunto)}</td>
+            <td>${escaparHTML(mensaje.mensaje)}</td>
+            <td>${escaparHTML(mensaje.fecha)}</td>
+            <td><span class="badge ${mensaje.atendido ? 'bg-success' : 'bg-warning text-dark'}">${mensaje.atendido ? 'Atendido' : 'Pendiente'}</span></td>
+            <td class="text-nowrap">
+                <button type="button" class="btn btn-sm btn-outline-success" onclick="alternarEstadoMensaje(${Number(mensaje.id)})" title="Cambiar estado"><i class="bi bi-check2"></i></button>
+                <button type="button" class="btn btn-sm btn-outline-danger" onclick="eliminarMensajeAdmin(${Number(mensaje.id)})" title="Eliminar mensaje"><i class="bi bi-trash"></i></button>
+            </td>
+        </tr>
+    `).join('') : '<tr><td colspan="7" class="text-center text-muted py-4">No hay mensajes de contacto.</td></tr>';
+}
+
+function alternarEstadoMensaje(id) {
+    const mensajes = JSON.parse(localStorage.getItem('mensajes_contacto_db')) || [];
+    const mensaje = mensajes.find(item => item.id === id);
+    if (!mensaje) return;
+    mensaje.atendido = !mensaje.atendido;
+    localStorage.setItem('mensajes_contacto_db', JSON.stringify(mensajes));
+    listarMensajesAdmin();
+}
+
+function eliminarMensajeAdmin(id) {
+    if (!confirm('¿Seguro de eliminar este mensaje?')) return;
+    const mensajes = (JSON.parse(localStorage.getItem('mensajes_contacto_db')) || []).filter(mensaje => mensaje.id !== id);
+    localStorage.setItem('mensajes_contacto_db', JSON.stringify(mensajes));
+    listarMensajesAdmin();
 }
