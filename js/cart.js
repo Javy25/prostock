@@ -26,11 +26,12 @@ function renderizarCarrito() {
         return;
     }
 
-    let subtotal = 0;
+    let totalConIva = 0;
 
     carrito.forEach((item, index) => {
-        const itemTotal = item.precio * item.cantidad;
-        subtotal += itemTotal;
+        const precioConIva = calcularPrecioConIva(item.precio);
+        const itemTotal = precioConIva * item.cantidad;
+        totalConIva += itemTotal;
 
         const tr = document.createElement('tr');
         tr.className = 'align-middle';
@@ -39,7 +40,7 @@ function renderizarCarrito() {
                 <img src="${escaparHTML(item.imagen)}" width="50" height="50" class="rounded object-fit-cover me-2" alt="${escaparHTML(item.nombre)}">
                 <span class="fw-bold">${escaparHTML(item.nombre)}</span>
             </td>
-            <td>$${item.precio.toLocaleString('es-CL')}</td>
+            <td>$${precioConIva.toLocaleString('es-CL')}</td>
             <td>
                 <div class="input-group input-group-sm" style="width: 110px;">
                     <button class="btn btn-outline-secondary" onclick="cambiarCantidad(${index}, -1)">-</button>
@@ -57,12 +58,12 @@ function renderizarCarrito() {
         tbody.appendChild(tr);
     });
 
-    const iva = Math.round(subtotal * 0.19);
-    const total = subtotal + iva;
+    const subtotal = Math.round(totalConIva / 1.19);
+    const iva = totalConIva - subtotal;
 
     if (subtotalEl) subtotalEl.textContent = `$${subtotal.toLocaleString('es-CL')}`;
     if (ivaEl) ivaEl.textContent = `$${iva.toLocaleString('es-CL')}`;
-    if (totalEl) totalEl.textContent = `$${total.toLocaleString('es-CL')}`;
+    if (totalEl) totalEl.textContent = `$${totalConIva.toLocaleString('es-CL')}`;
 }
 
 function cambiarCantidad(index, cambio) {
@@ -191,9 +192,9 @@ function procesarCompra() {
         productoPorId.get(item.id).stock -= item.cantidad;
     });
 
-    const subtotal = carrito.reduce((total, item) => total + item.precio * item.cantidad, 0);
-    const iva = Math.round(subtotal * 0.19);
-    const total = subtotal + iva;
+    const total = carrito.reduce((acumulado, item) => acumulado + calcularPrecioConIva(item.precio) * item.cantidad, 0);
+    const subtotal = Math.round(total / 1.19);
+    const iva = total - subtotal;
 
     const pedido = {
         id: Date.now(),

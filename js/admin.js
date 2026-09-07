@@ -48,10 +48,15 @@ function escaparHTML(valor) {
     return elemento.innerHTML;
 }
 
+    function calcularPrecioConIva(precioNeto) {
+        return Math.round(Number(precioNeto) * 1.19);
+    }
+
 // 1. Mantenedor de Productos (admin/productos-listar.html)
 function listarProductosAdmin() {
     const tbody = document.getElementById('tabla-admin-productos');
-    const productos = JSON.parse(localStorage.getItem('productos_db')) || [];
+    const productos = (JSON.parse(localStorage.getItem('productos_db')) || [])
+        .sort((productoA, productoB) => Number(productoA.id) - Number(productoB.id));
     tbody.innerHTML = '';
 
     productos.forEach(p => {
@@ -60,7 +65,7 @@ function listarProductosAdmin() {
             <td>${escaparHTML(p.codigo)}</td>
             <td>${escaparHTML(p.nombre)}</td>
             <td>${escaparHTML(p.categoria)}</td>
-            <td>$${p.precio.toLocaleString('es-CL')}</td>
+                <td>$${calcularPrecioConIva(p.precio).toLocaleString('es-CL')} <small>IVA incl.</small></td>
             <td>${p.stock}</td>
             <td>
                 <a href="producto-form.html?id=${p.id}" class="btn btn-sm btn-warning"><i class="bi bi-pencil"></i></a>

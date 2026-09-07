@@ -71,7 +71,8 @@
                     <span class="badge bg-secondary mb-2 w-fit-content">${escaparHTML(producto.categoria)}</span>
                     <h2>${escaparHTML(producto.nombre)}</h2>
                     <p class="text-muted mb-1">SKU / Código: <strong>${escaparHTML(producto.codigo)}</strong></p>
-                    <h3 class="text-primary fw-bold my-3">$${producto.precio.toLocaleString('es-CL')}</h3>
+                    <h3 class="text-primary fw-bold my-3">$${calcularPrecioConIva(producto.precio).toLocaleString('es-CL')}</h3>
+                    <p class="text-muted small mb-1">Precio con IVA incluido</p>
                     <p>Stock disponible: <strong>${producto.stock} unidades</strong></p>
                     <div class="d-flex gap-2 mt-3">
                         <button onclick="agregarAlCarrito(${producto.id})" class="btn btn-danger btn-lg">

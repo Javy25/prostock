@@ -31,6 +31,10 @@ function escaparHTML(valor) {
     return elemento.innerHTML;
 }
 
+function calcularPrecioConIva(precioNeto) {
+    return Math.round(Number(precioNeto) * 1.19);
+}
+
 function configurarPerfil() {
     const nombreEl = document.getElementById('perfil-nombre');
     if (!nombreEl) return;
@@ -130,7 +134,7 @@ function renderizarPatrocinados(lista) {
             <div class="sponsored-card-body">
                 <span class="sponsored-category">${escaparHTML(producto.categoria)}</span>
                 <h3><a href="detalle-producto.html?id=${Number(producto.id)}">${escaparHTML(producto.nombre)}</a></h3>
-                <strong>$${producto.precio.toLocaleString('es-CL')}</strong>
+                <strong>$${calcularPrecioConIva(producto.precio).toLocaleString('es-CL')} IVA incl.</strong>
                 <span class="sponsored-provider">Prostock</span>
             </div>
         </article>
@@ -151,46 +155,25 @@ function renderizarCatalogo(lista) {
         return;
     }
 
-    const productosPorCategoria = lista.reduce((grupos, producto) => {
-        const categoria = producto.categoria || 'Otros';
-        if (!grupos[categoria]) grupos[categoria] = [];
-        grupos[categoria].push(producto);
-        return grupos;
-    }, {});
-
-    Object.entries(productosPorCategoria).forEach(([categoria, productos]) => {
-        const seccion = document.createElement('section');
-        seccion.className = 'product-category-section col-12';
-        seccion.innerHTML = `
-            <div class="product-category-heading">
-                <h3>${categoria}</h3>
-                <span>${productos.length} producto${productos.length === 1 ? '' : 's'}</span>
-            </div>
-            <div class="row g-4 product-category-grid"></div>
-        `;
-        const grid = seccion.querySelector('.product-category-grid');
-
-        productos.forEach(prod => {
-            const div = document.createElement('div');
-            div.className = 'col-sm-6 col-lg-4 col-xl-3';
-            div.innerHTML = `
-                <div class="card h-100 shadow-sm border-0 product-card" role="link" tabindex="0" onclick="window.location.href='detalle-producto.html?id=${Number(prod.id)}'" onkeydown="if (event.key === 'Enter') window.location.href='detalle-producto.html?id=${Number(prod.id)}'">
-                    <img src="${escaparHTML(prod.imagen)}" class="card-img-top" alt="${escaparHTML(prod.nombre)}" style="height: 180px; object-fit: cover;">
-                    <div class="card-body d-flex flex-column">
-                        <small class="text-muted fw-bold">CÓD: ${escaparHTML(prod.codigo)}</small>
-                        <h6 class="card-title fw-bold my-1">${escaparHTML(prod.nombre)}</h6>
-                        <div class="mt-auto d-flex justify-content-between align-items-center">
-                            <span class="fs-5 fw-bold text-primary">$${prod.precio.toLocaleString('es-CL')}</span>
-                        </div>
-                        <button onclick="event.stopPropagation(); agregarAlCarrito(${prod.id})" class="btn btn-danger btn-sm w-100 mt-2">
-                            <i class="bi bi-cart-plus me-1"></i> Agregar
-                        </button>
+    lista.forEach(prod => {
+        const div = document.createElement('div');
+        div.className = 'col-sm-6 col-lg-4 col-xl-3 mb-4';
+        div.innerHTML = `
+            <div class="card h-100 shadow-sm border-0 product-card" role="link" tabindex="0" onclick="window.location.href='detalle-producto.html?id=${Number(prod.id)}'" onkeydown="if (event.key === 'Enter') window.location.href='detalle-producto.html?id=${Number(prod.id)}'">
+                <img src="${escaparHTML(prod.imagen)}" class="card-img-top" alt="${escaparHTML(prod.nombre)}" style="height: 180px; object-fit: cover;">
+                <div class="card-body d-flex flex-column">
+                    <small class="text-muted fw-bold">CÓD: ${escaparHTML(prod.codigo)}</small>
+                    <h6 class="card-title fw-bold my-1">${escaparHTML(prod.nombre)}</h6>
+                    <div class="mt-auto d-flex justify-content-between align-items-center">
+                        <span class="fs-5 fw-bold text-primary">$${calcularPrecioConIva(prod.precio).toLocaleString('es-CL')} <small class="fs-6 fw-normal">IVA incl.</small></span>
                     </div>
+                    <button onclick="event.stopPropagation(); agregarAlCarrito(${prod.id})" class="btn btn-danger btn-sm w-100 mt-2">
+                        <i class="bi bi-cart-plus me-1"></i> Agregar
+                    </button>
                 </div>
-            `;
-            grid.appendChild(div);
-        });
-        container.appendChild(seccion);
+            </div>
+        `;
+        container.appendChild(div);
     });
 }
 
