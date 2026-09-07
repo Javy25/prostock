@@ -57,7 +57,7 @@
                             <span>Total:</span>
                             <span id="carrito-total" class="text-primary">$0</span>
                         </div>
-                        <button onclick="procesarCompra()" class="btn btn-success w-100 py-2 fw-bold">
+                        <button onclick="mostrarFormularioDespacho()" class="btn btn-success w-100 py-2 fw-bold">
                             Pagar Pedido
                         </button>
                         <a href="productos.html" class="btn btn-link w-100 mt-2 text-decoration-none">
@@ -69,6 +69,62 @@
         </div>
     </main>
 
+    <!-- Datos de despacho -->
+    <div class="modal fade" id="modalDespacho" tabindex="-1" aria-labelledby="modalDespachoLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalDespachoLabel">Datos de despacho</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+
+                <div class="modal-body">
+                    <form id="formulario-despacho">
+                        <div class="mb-3">
+                            <label class="form-label">Nombre completo</label>
+                            <input type="text" id="nombre-despacho" class="form-control" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Teléfono</label>
+                            <input type="tel" id="telefono-despacho" class="form-control" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Dirección</label>
+                            <input type="text" id="direccion-despacho" class="form-control" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Comuna</label>
+                            <input type="text" id="comuna-despacho" class="form-control" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Región</label>
+                            <input type="text" id="region-despacho" class="form-control" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Observaciones</label>
+                            <textarea id="observaciones-despacho" class="form-control" rows="3"></textarea>
+                        </div>
+                    </form>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        Cancelar
+                    </button>
+                    <button type="button" onclick="confirmarPedido()" class="btn btn-success">
+                        Confirmar Pedido
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script src="js/main.js"></script>
     <script src="js/cart.js"></script>
 </body>
