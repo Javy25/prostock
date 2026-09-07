@@ -118,6 +118,13 @@ function mostrarFormularioDespacho() {
         return;
     }
 
+    document.getElementById('nombre-despacho').value = usuario.nombre || '';
+    document.getElementById('telefono-despacho').value = usuario.telefono || '';
+    document.getElementById('direccion-despacho').value = usuario.direccion || '';
+    document.getElementById('comuna-despacho').value = usuario.comuna || '';
+    document.getElementById('region-despacho').value = usuario.region || '';
+    document.getElementById('observaciones-despacho').value = '';
+
     const modal = new bootstrap.Modal(document.getElementById('modalDespacho'));
     modal.show();
 }
