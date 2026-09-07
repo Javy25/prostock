@@ -55,7 +55,7 @@
             `).join('');
             const slides = imagenes.map((imagen, indice) => `
                 <div class="carousel-item ${indice === 0 ? 'active' : ''}">
-                    <img src="${imagen}" class="d-block w-100 product-detail-image" alt="${producto.nombre}, imagen ${indice + 1}">
+                    <img src="${escaparHTML(imagen)}" class="d-block w-100 product-detail-image" alt="${escaparHTML(producto.nombre)}, imagen ${indice + 1}">
                 </div>
             `).join('');
 
@@ -68,9 +68,9 @@
                     </div>
                 </div>
                 <div class="col-md-6 d-flex flex-column justify-content-center">
-                    <span class="badge bg-secondary mb-2 w-fit-content">${producto.categoria}</span>
-                    <h2>${producto.nombre}</h2>
-                    <p class="text-muted mb-1">SKU / Código: <strong>${producto.codigo}</strong></p>
+                    <span class="badge bg-secondary mb-2 w-fit-content">${escaparHTML(producto.categoria)}</span>
+                    <h2>${escaparHTML(producto.nombre)}</h2>
+                    <p class="text-muted mb-1">SKU / Código: <strong>${escaparHTML(producto.codigo)}</strong></p>
                     <h3 class="text-primary fw-bold my-3">$${producto.precio.toLocaleString('es-CL')}</h3>
                     <p>Stock disponible: <strong>${producto.stock} unidades</strong></p>
                     <div class="d-flex gap-2 mt-3">
@@ -84,4 +84,4 @@
         });
     </script>
 </body>
-</html>
+</html>>

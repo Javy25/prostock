@@ -36,8 +36,8 @@ function renderizarCarrito() {
         tr.className = 'align-middle';
         tr.innerHTML = `
             <td>
-                <img src="${item.imagen}" width="50" height="50" class="rounded object-fit-cover me-2" alt="${item.nombre}">
-                <span class="fw-bold">${item.nombre}</span>
+                <img src="${escaparHTML(item.imagen)}" width="50" height="50" class="rounded object-fit-cover me-2" alt="${escaparHTML(item.nombre)}">
+                <span class="fw-bold">${escaparHTML(item.nombre)}</span>
             </td>
             <td>$${item.precio.toLocaleString('es-CL')}</td>
             <td>
@@ -108,7 +108,35 @@ function procesarCompra() {
         return;
     }
 
-    alert('¡Compra realizada con éxito! Se ha enviado el detalle a su correo.');
+    const productos = JSON.parse(localStorage.getItem('productos_db')) || [];
+    const productoPorId = new Map(productos.map(producto => [producto.id, producto]));
+    const sinStock = carrito.find(item => {
+        const producto = productoPorId.get(item.id);
+        return !producto || producto.stock < item.cantidad;
+    });
+    if (sinStock) {
+        alert(`No hay stock suficiente para "${sinStock.nombre}".`);
+        return;
+    }
+
+    carrito.forEach(item => {
+        productoPorId.get(item.id).stock -= item.cantidad;
+    });
+    const subtotal = carrito.reduce((total, item) => total + item.precio * item.cantidad, 0);
+    const pedido = {
+        id: Date.now(),
+        usuarioId: usuario.id,
+        fecha: new Date().toLocaleDateString('es-CL'),
+        total: subtotal + Math.round(subtotal * 0.19),
+        estado: 'Confirmado',
+        items: carrito
+    };
+    const pedidos = JSON.parse(localStorage.getItem('pedidos_db')) || [];
+    pedidos.push(pedido);
+    localStorage.setItem('productos_db', JSON.stringify(productos));
+    localStorage.setItem('pedidos_db', JSON.stringify(pedidos));
+
+    alert('¡Compra realizada con éxito! Puedes revisar el pedido en tu perfil.');
     localStorage.removeItem('carrito');
     window.location.href = 'index.html';
 }

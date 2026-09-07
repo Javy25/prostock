@@ -86,6 +86,16 @@
     <script>
         document.getElementById('form-contacto').addEventListener('submit', (e) => {
             e.preventDefault();
+            const mensajes = JSON.parse(localStorage.getItem('mensajes_contacto_db')) || [];
+            mensajes.push({
+                id: Date.now(),
+                nombre: document.getElementById('contacto-nombre').value.trim(),
+                email: document.getElementById('contacto-email').value.trim().toLowerCase(),
+                asunto: document.getElementById('contacto-asunto').value.trim(),
+                mensaje: document.getElementById('contacto-mensaje').value.trim(),
+                fecha: new Date().toLocaleDateString('es-CL')
+            });
+            localStorage.setItem('mensajes_contacto_db', JSON.stringify(mensajes));
             const alertContainer = document.getElementById('alert-contacto');
             alertContainer.innerHTML = `
                 <div class="alert alert-success alert-dismissible fade show" role="alert">

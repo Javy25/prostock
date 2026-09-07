@@ -1,5 +1,6 @@
-document.addEventListener('DOMContentLoaded', () => {
-    verificarRolAdmin();
+document.addEventListener('DOMContentLoaded', async () => {
+    if (!verificarRolAdmin()) return;
+    await asegurarProductosIniciales();
 
     if (document.getElementById('tabla-admin-productos')) {
         listarProductosAdmin();
@@ -10,6 +11,9 @@ document.addEventListener('DOMContentLoaded', () => {
     if (document.getElementById('tabla-admin-usuarios')) {
         listarUsuariosAdmin();
     }
+    if (document.getElementById('form-usuario-admin')) {
+        configurarFormularioUsuario();
+    }
 });
 
 function verificarRolAdmin() {
@@ -18,7 +22,27 @@ function verificarRolAdmin() {
     if (!activo || activo.rol !== 'ADMIN') {
         alert('Acceso restringido solo para Administradores.');
         window.location.href = '../login.html';
+        return false;
     }
+    return true;
+}
+
+async function asegurarProductosIniciales() {
+    if (localStorage.getItem('productos_db')) return;
+
+    try {
+        const respuesta = await fetch('../data/productos.json');
+        if (!respuesta.ok) throw new Error('No se pudieron cargar los productos iniciales.');
+        localStorage.setItem('productos_db', JSON.stringify(await respuesta.json()));
+    } catch (error) {
+        console.error(error);
+    }
+}
+
+function escaparHTML(valor) {
+    const elemento = document.createElement('div');
+    elemento.textContent = String(valor ?? '');
+    return elemento.innerHTML;
 }
 
 // 1. Mantenedor de Productos (admin/productos-listar.html)
@@ -30,9 +54,9 @@ function listarProductosAdmin() {
     productos.forEach(p => {
         const tr = document.createElement('tr');
         tr.innerHTML = `
-            <td>${p.codigo}</td>
-            <td>${p.nombre}</td>
-            <td>${p.categoria}</td>
+            <td>${escaparHTML(p.codigo)}</td>
+            <td>${escaparHTML(p.nombre)}</td>
+            <td>${escaparHTML(p.categoria)}</td>
             <td>$${p.precio.toLocaleString('es-CL')}</td>
             <td>${p.stock}</td>
             <td>
@@ -106,9 +130,9 @@ function listarUsuariosAdmin() {
     usuarios.forEach(u => {
         const tr = document.createElement('tr');
         tr.innerHTML = `
-            <td>${u.nombre}</td>
-            <td>${u.email}</td>
-            <td><span class="badge ${u.rol === 'ADMIN' ? 'bg-danger' : 'bg-secondary'}">${u.rol}</span></td>
+            <td>${escaparHTML(u.nombre)}</td>
+            <td>${escaparHTML(u.email)}</td>
+            <td><span class="badge ${u.rol === 'ADMIN' ? 'bg-danger' : 'bg-secondary'}">${escaparHTML(u.rol)}</span></td>
             <td>
                 <a href="usuario-form.html?id=${u.id}" class="btn btn-sm btn-warning"><i class="bi bi-pencil"></i></a>
                 <button onclick="eliminarUsuarioAdmin(${u.id})" class="btn btn-sm btn-danger"><i class="bi bi-trash"></i></button>
@@ -119,9 +143,68 @@ function listarUsuariosAdmin() {
 }
 
 function eliminarUsuarioAdmin(id) {
+    const usuarioActivo = JSON.parse(localStorage.getItem('usuarioActivo'));
+    if (usuarioActivo?.id === id) {
+        alert('No puedes eliminar la cuenta con la que iniciaste sesión.');
+        return;
+    }
     if (!confirm('¿Seguro de eliminar este usuario?')) return;
     let usuarios = JSON.parse(localStorage.getItem('usuarios_db')) || [];
     usuarios = usuarios.filter(u => u.id !== id);
     localStorage.setItem('usuarios_db', JSON.stringify(usuarios));
     listarUsuariosAdmin();
+}
+
+function configurarFormularioUsuario() {
+    const params = new URLSearchParams(window.location.search);
+    const usuarioId = params.get('id');
+    const usuarios = JSON.parse(localStorage.getItem('usuarios_db')) || [];
+    const usuarioActual = usuarioId ? usuarios.find(usuario => usuario.id == usuarioId) : null;
+
+    if (usuarioId && !usuarioActual) {
+        alert('Usuario no encontrado.');
+        window.location.href = 'usuarios-listar.html';
+        return;
+    }
+
+    if (usuarioActual) {
+        document.getElementById('usr-nombre').value = usuarioActual.nombre;
+        document.getElementById('usr-email').value = usuarioActual.email;
+        document.getElementById('usr-rol').value = usuarioActual.rol;
+    }
+
+    document.getElementById('form-usuario-admin').addEventListener('submit', evento => {
+        evento.preventDefault();
+        const email = document.getElementById('usr-email').value.trim().toLowerCase();
+        const password = document.getElementById('usr-password').value;
+        const dominiosPermitidos = ['@duoc.cl', '@profesor.duoc.cl', '@gmail.com'];
+
+        if (!dominiosPermitidos.some(dominio => email.endsWith(dominio))) {
+            alert('El correo debe ser @duoc.cl, @profesor.duoc.cl o @gmail.com');
+            return;
+        }
+        if (usuarios.some(usuario => usuario.email === email && usuario.id != usuarioId)) {
+            alert('El correo ya está registrado.');
+            return;
+        }
+        if (!usuarioActual && !password) {
+            alert('Debes definir una contraseña para el nuevo usuario.');
+            return;
+        }
+
+        const nuevoUsuario = {
+            ...usuarioActual,
+            id: usuarioActual?.id || Date.now(),
+            nombre: document.getElementById('usr-nombre').value.trim(),
+            email,
+            rol: document.getElementById('usr-rol').value,
+            ...(password ? { password } : {})
+        };
+        const indice = usuarios.findIndex(usuario => usuario.id == usuarioId);
+        if (indice >= 0) usuarios[indice] = nuevoUsuario;
+        else usuarios.push(nuevoUsuario);
+
+        localStorage.setItem('usuarios_db', JSON.stringify(usuarios));
+        window.location.href = 'usuarios-listar.html';
+    });
 }

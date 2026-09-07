@@ -3,11 +3,51 @@ let productosGlobales = [];
 document.addEventListener('DOMContentLoaded', () => {
     actualizarContadorCarrito();
     verificarEstadoSesion();
+    configurarPerfil();
 
     if (document.getElementById('productos-container')) {
         cargarProductos();
     }
 });
+
+function escaparHTML(valor) {
+    const elemento = document.createElement('div');
+    elemento.textContent = String(valor ?? '');
+    return elemento.innerHTML;
+}
+
+function configurarPerfil() {
+    const nombreEl = document.getElementById('perfil-nombre');
+    if (!nombreEl) return;
+
+    const usuario = JSON.parse(localStorage.getItem('usuarioActivo'));
+    if (!usuario) {
+        window.location.href = 'login.html';
+        return;
+    }
+
+    const nombre = usuario.nombre || 'Usuario';
+    const iniciales = nombre.split(/\s+/).filter(Boolean).slice(0, 2).map(parte => parte[0]).join('').toUpperCase();
+    nombreEl.textContent = nombre;
+    document.getElementById('perfil-iniciales').textContent = iniciales || 'US';
+    document.getElementById('perfil-rol').textContent = usuario.rol === 'ADMIN' ? 'Administrador' : 'Cliente registrado';
+    document.getElementById('perfil-email').textContent = usuario.email || 'No registrado';
+    document.getElementById('perfil-run').textContent = usuario.run || 'No registrado';
+    document.getElementById('perfil-region').textContent = usuario.region || 'No registrada';
+    document.getElementById('perfil-comuna').textContent = usuario.comuna || 'No registrada';
+    document.getElementById('perfil-direccion').textContent = usuario.direccion || 'No registrada';
+
+    const pedidos = (JSON.parse(localStorage.getItem('pedidos_db')) || []).filter(pedido => pedido.usuarioId === usuario.id);
+    const tbody = document.getElementById('perfil-pedidos');
+    tbody.innerHTML = pedidos.length ? pedidos.map(pedido => `
+        <tr>
+            <td>#${escaparHTML(pedido.id)}</td>
+            <td>${escaparHTML(pedido.fecha)}</td>
+            <td>$${Number(pedido.total).toLocaleString('es-CL')}</td>
+            <td><span class="badge bg-success">${escaparHTML(pedido.estado)}</span></td>
+        </tr>
+    `).join('') : '<tr><td colspan="4" class="text-center text-muted py-4">Aún no tienes compras registradas.</td></tr>';
+}
 
 // Carga productos desde /data/productos.json o localStorage
 async function cargarProductos() {
@@ -59,7 +99,7 @@ function configurarCategoriasInicio() {
     };
 
     tabs.innerHTML = categorias.map((categoria, indice) => `
-        <button type="button" class="home-category-tab${indice === 0 ? ' active' : ''}" data-category="${categoria}" role="tab" aria-selected="${indice === 0}">${categoria}</button>
+        <button type="button" class="home-category-tab${indice === 0 ? ' active' : ''}" data-category="${escaparHTML(categoria)}" role="tab" aria-selected="${indice === 0}">${escaparHTML(categoria)}</button>
     `).join('');
     tabs.addEventListener('click', evento => {
         const tab = evento.target.closest('button');
@@ -75,11 +115,11 @@ function renderizarPatrocinados(lista) {
     container.innerHTML = lista.map(producto => `
         <article class="sponsored-card">
             <a href="detalle-producto.html?id=${producto.id}" class="sponsored-image-link">
-                <img src="${producto.imagen}" alt="${producto.nombre}">
+                <img src="${escaparHTML(producto.imagen)}" alt="${escaparHTML(producto.nombre)}">
             </a>
             <div class="sponsored-card-body">
-                <span class="sponsored-category">${producto.categoria}</span>
-                <h3><a href="detalle-producto.html?id=${producto.id}">${producto.nombre}</a></h3>
+                <span class="sponsored-category">${escaparHTML(producto.categoria)}</span>
+                <h3><a href="detalle-producto.html?id=${Number(producto.id)}">${escaparHTML(producto.nombre)}</a></h3>
                 <strong>$${producto.precio.toLocaleString('es-CL')}</strong>
                 <span class="sponsored-provider">Prostock</span>
             </div>
@@ -125,13 +165,13 @@ function renderizarCatalogo(lista) {
             div.className = 'col-sm-6 col-lg-4 col-xl-3';
             div.innerHTML = `
                 <div class="card h-100 shadow-sm border-0">
-                    <img src="${prod.imagen}" class="card-img-top" alt="${prod.nombre}" style="height: 180px; object-fit: cover;">
+                        <img src="${escaparHTML(prod.imagen)}" class="card-img-top" alt="${escaparHTML(prod.nombre)}" style="height: 180px; object-fit: cover;">
                     <div class="card-body d-flex flex-column">
-                        <small class="text-muted fw-bold">CÓD: ${prod.codigo}</small>
-                        <h6 class="card-title fw-bold my-1">${prod.nombre}</h6>
+                        <small class="text-muted fw-bold">CÓD: ${escaparHTML(prod.codigo)}</small>
+                        <h6 class="card-title fw-bold my-1">${escaparHTML(prod.nombre)}</h6>
                         <div class="mt-auto d-flex justify-content-between align-items-center">
                             <span class="fs-5 fw-bold text-primary">$${prod.precio.toLocaleString('es-CL')}</span>
-                            <a href="detalle-producto.html?id=${prod.id}" class="btn btn-sm btn-outline-primary">Ver Ficha</a>
+                            <a href="detalle-producto.html?id=${Number(prod.id)}" class="btn btn-sm btn-outline-primary">Ver Ficha</a>
                         </div>
                         <button onclick="agregarAlCarrito(${prod.id})" class="btn btn-danger btn-sm w-100 mt-2">
                             <i class="bi bi-cart-plus me-1"></i> Agregar
@@ -178,7 +218,7 @@ function verificarEstadoSesion() {
         if (usuarioActivo) {
             userContainer.innerHTML = `
                 <a href="perfil.html" class="text-decoration-none me-2">
-                    <i class="bi bi-person-circle"></i> ${usuarioActivo.nombre}
+                    <i class="bi bi-person-circle"></i> ${escaparHTML(usuarioActivo.nombre)}
                 </a>
                 ${usuarioActivo.rol === 'ADMIN' ? '<a href="admin/index.html" class="badge bg-warning text-dark text-decoration-none me-2">Panel Admin</a>' : ''}
                 <button onclick="cerrarSesion()" class="btn btn-sm btn-outline-danger">Salir</button>

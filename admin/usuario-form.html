@@ -53,50 +53,5 @@
     </div>
 
     <script src="../js/admin.js"></script>
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const params = new URLSearchParams(window.location.search);
-            const usrId = params.get('id');
-            let usuarios = JSON.parse(localStorage.getItem('usuarios_db')) || [];
-
-            if (usrId) {
-                const usr = usuarios.find(u => u.id == usrId);
-                if (usr) {
-                    document.getElementById('usr-nombre').value = usr.nombre;
-                    document.getElementById('usr-email').value = usr.email;
-                    document.getElementById('usr-rol').value = usr.rol;
-                }
-            }
-
-            document.getElementById('form-usuario-admin').addEventListener('submit', (e) => {
-                e.preventDefault();
-                
-                const email = document.getElementById('usr-email').value.trim().toLowerCase();
-                const dominiosPermitidos = ['@duoc.cl', '@profesor.duoc.cl', '@gmail.com'];
-                if (!dominiosPermitidos.some(d => email.endsWith(d))) {
-                    alert('El correo debe ser @duoc.cl, @profesor.duoc.cl o @gmail.com');
-                    return;
-                }
-
-                const nuevoUsr = {
-                    id: usrId ? Number(usrId) : Date.now(),
-                    nombre: document.getElementById('usr-nombre').value.trim(),
-                    email: email,
-                    password: document.getElementById('usr-password').value || '123456',
-                    rol: document.getElementById('usr-rol').value
-                };
-
-                if (usrId) {
-                    const index = usuarios.findIndex(u => u.id == usrId);
-                    usuarios[index] = nuevoUsr;
-                } else {
-                    usuarios.push(nuevoUsr);
-                }
-
-                localStorage.setItem('usuarios_db', JSON.stringify(usuarios));
-                window.location.href = 'usuarios-listar.html';
-            });
-        });
-    </script>
 </body>
 </html>
