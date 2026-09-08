@@ -9,10 +9,28 @@
     <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark sticky-top shadow-sm">
         <div class="container">
             <a class="navbar-brand" href="index.html"><img src="img/logo-prostock.svg" class="brand-logo" alt="Prostock"></a>
-            <div id="user-navbar-info"></div>
+            <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Abrir navegación">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                    <li class="nav-item"><a class="nav-link" href="index.html">Inicio</a></li>
+                    <li class="nav-item"><a class="nav-link active" aria-current="page" href="productos.html">Productos</a></li>
+                    <li class="nav-item"><a class="nav-link" href="nosotros.html">Nosotros</a></li>
+                    <li class="nav-item"><a class="nav-link" href="blogs.html">Blog</a></li>
+                    <li class="nav-item"><a class="nav-link" href="contacto.html">Contacto</a></li>
+                </ul>
+                <div class="d-flex align-items-center gap-3">
+                    <a href="carrito.html" class="btn btn-outline-light position-relative" aria-label="Carrito de compras">
+                        <i class="bi bi-cart3"></i>
+                        <span id="cart-count" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">0</span>
+                    </a>
+                    <div id="user-navbar-info" class="text-white small"></div>
+                </div>
+            </div>
         </div>
     </nav>
 
@@ -28,18 +46,20 @@
         document.addEventListener('DOMContentLoaded', async () => {
             const params = new URLSearchParams(window.location.search);
             const id = Number(params.get('id'));
-            const productosGuardados = JSON.parse(localStorage.getItem('productos_db')) || [];
-            let productos = productosGuardados;
-            try {
-                const respuesta = await fetch('data/productos.json');
-                const productosBase = await respuesta.json();
-                productos = productosGuardados.map(productoGuardado => {
-                    const productoBase = productosBase.find(producto => producto.id === productoGuardado.id);
-                    return productoBase ? { ...productoGuardado, imagen: productoBase.imagen, imagenes: productoBase.imagenes || productoGuardado.imagenes } : productoGuardado;
-                });
-                productos = productos.length ? productos : productosBase;
-            } catch (error) {
-                // Usa la copia local si la página se abre sin servidor.
+            const productosGuardados = localStorage.getItem('productos_db');
+            let productos;
+
+            if (productosGuardados) {
+                productos = JSON.parse(productosGuardados);
+            } else {
+                try {
+                    const respuesta = await fetch('data/productos.json');
+                    if (!respuesta.ok) throw new Error('No se pudieron cargar los productos iniciales.');
+                    productos = await respuesta.json();
+                    localStorage.setItem('productos_db', JSON.stringify(productos));
+                } catch (error) {
+                    productos = [];
+                }
             }
             const producto = productos.find(p => p.id === id);
 
@@ -85,4 +105,4 @@
         });
     </script>
 </body>
-</html>>
+</html>>>
