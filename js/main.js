@@ -1,5 +1,5 @@
 let productosGlobales = [];
-
+// Esperar a que cargue el HTML
 document.addEventListener('DOMContentLoaded', () => {
     asegurarAdministradorInicial();
     actualizarContadorCarrito();
@@ -11,6 +11,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
+// Crear administrador inicial
 function asegurarAdministradorInicial() {
     const usuarios = JSON.parse(localStorage.getItem('usuarios_db')) || [];
     if (usuarios.some(usuario => usuario.email === 'admin@duoc.cl')) return;
@@ -25,12 +26,16 @@ function asegurarAdministradorInicial() {
     localStorage.setItem('usuarios_db', JSON.stringify(usuarios));
 }
 
+
+//Evitar HTML peligroso
 function escaparHTML(valor) {
     const elemento = document.createElement('div');
     elemento.textContent = String(valor ?? '');
     return elemento.innerHTML;
 }
 
+
+// Calcular precio con IVA
 function calcularPrecioConIva(precioNeto) {
     return Math.round(Number(precioNeto) * 1.19);
 }
