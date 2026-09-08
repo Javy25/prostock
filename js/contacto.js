@@ -15,11 +15,21 @@ document.addEventListener('DOMContentLoaded', () => {
             atendido: false
         });
         localStorage.setItem('mensajes_contacto_db', JSON.stringify(mensajes));
+        const destinatario = 'contacto@prostock.cl';
+        const asunto = document.getElementById('contacto-asunto').value.trim();
+        const cuerpo = [
+            `Nombre: ${document.getElementById('contacto-nombre').value.trim()}`,
+            `Correo: ${document.getElementById('contacto-email').value.trim().toLowerCase()}`,
+            '',
+            document.getElementById('contacto-mensaje').value.trim()
+        ].join('\n');
+        const urlGmail = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(destinatario)}&su=${encodeURIComponent(asunto)}&body=${encodeURIComponent(cuerpo)}`;
         document.getElementById('alert-contacto').innerHTML = `
             <div class="alert alert-success alert-dismissible fade show" role="alert">
-                Gracias por contactarnos. Tu mensaje fue enviado correctamente.
+                Gmail se abrirá con tu mensaje preparado para enviarlo.
                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
             </div>`;
         formulario.reset();
+        window.open(urlGmail, '_blank', 'noopener');
     });
 });
