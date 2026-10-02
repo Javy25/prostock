@@ -1,0 +1,95 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${DATABASE_USER:-prostock}
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD:-prostock}
+      POSTGRES_DB: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - prostock-postgres:/var/lib/postgresql/data
+      - ./infrastructure/init-databases.sql:/docker-entrypoint-initdb.d/01-init-databases.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  catalog-service:
+    build:
+      context: .
+      dockerfile: catalog-service/Dockerfile
+    environment:
+      DATABASE_URL: jdbc:postgresql://postgres:5432/prostock_catalog
+      DATABASE_USER: ${DATABASE_USER:-prostock}
+      DATABASE_PASSWORD: ${DATABASE_PASSWORD:-prostock}
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  identity-service:
+    build:
+      context: .
+      dockerfile: identity-service/Dockerfile
+    environment:
+      DATABASE_URL: jdbc:postgresql://postgres:5432/prostock_identity
+      DATABASE_USER: ${DATABASE_USER:-prostock}
+      DATABASE_PASSWORD: ${DATABASE_PASSWORD:-prostock}
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in backend/.env}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@duoc.cl}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-admin123}
+      ADMIN_NAME: ${ADMIN_NAME:-Administrador Prostock}
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  order-service:
+    build:
+      context: .
+      dockerfile: order-service/Dockerfile
+    environment:
+      DATABASE_URL: jdbc:postgresql://postgres:5432/prostock_orders
+      DATABASE_USER: ${DATABASE_USER:-prostock}
+      DATABASE_PASSWORD: ${DATABASE_PASSWORD:-prostock}
+      CATALOG_SERVICE_URL: http://catalog-service:8081
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in backend/.env}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      catalog-service:
+        condition: service_started
+
+  contact-service:
+    build:
+      context: .
+      dockerfile: contact-service/Dockerfile
+    environment:
+      DATABASE_URL: jdbc:postgresql://postgres:5432/prostock_contact
+      DATABASE_USER: ${DATABASE_USER:-prostock}
+      DATABASE_PASSWORD: ${DATABASE_PASSWORD:-prostock}
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  api-gateway:
+    build:
+      context: .
+      dockerfile: api-gateway/Dockerfile
+    environment:
+      CATALOG_SERVICE_URL: http://catalog-service:8081
+      IDENTITY_SERVICE_URL: http://identity-service:8082
+      ORDER_SERVICE_URL: http://order-service:8083
+      CONTACT_SERVICE_URL: http://contact-service:8084
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in backend/.env}
+      FRONTEND_ORIGIN: ${FRONTEND_ORIGIN:-http://localhost:5173}
+    depends_on:
+      - catalog-service
+      - identity-service
+      - order-service
+      - contact-service
+    ports:
+      - "8080:8080"
+
+volumes:
+  prostock-postgres:

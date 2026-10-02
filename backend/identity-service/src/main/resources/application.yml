@@ -1,0 +1,26 @@
+server:
+  port: ${PORT:8082}
+
+spring:
+  application:
+    name: identity-service
+  datasource:
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/prostock_identity}
+    username: ${DATABASE_USER:prostock}
+    password: ${DATABASE_PASSWORD:prostock}
+  jpa:
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: true
+
+security:
+  jwt-secret: ${JWT_SECRET}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info

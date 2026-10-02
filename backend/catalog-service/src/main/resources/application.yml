@@ -1,0 +1,23 @@
+server:
+  port: ${PORT:8081}
+
+spring:
+  application:
+    name: catalog-service
+  datasource:
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/prostock_catalog}
+    username: ${DATABASE_USER:prostock}
+    password: ${DATABASE_PASSWORD:prostock}
+  jpa:
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
