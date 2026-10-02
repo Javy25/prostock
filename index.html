@@ -1,108 +1,13 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Prostock - Inicio</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
-    <link rel="stylesheet" href="css/styles.css">
-</head>
-<body>
-    <!-- Navbar -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark sticky-top">
-        <div class="container">
-            <a class="navbar-brand" href="index.html"><img src="img/logo-prostock.svg" class="brand-logo" alt="Prostock"></a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav me-auto">
-                    <li class="nav-item"><a class="nav-link active" href="index.html">Inicio</a></li>
-                    <li class="nav-item"><a class="nav-link" href="productos.html">Productos</a></li>
-                    <li class="nav-item"><a class="nav-link" href="nosotros.html">Nosotros</a></li>
-                    <li class="nav-item"><a class="nav-link" href="blogs.html">Blog</a></li>
-                    <li class="nav-item"><a class="nav-link" href="contacto.html">Contacto</a></li>
-                </ul>
-                <div class="d-flex align-items-center gap-3">
-                    <a href="carrito.html" class="btn btn-outline-light position-relative">
-                        <i class="bi bi-cart3"></i>
-                        <span id="cart-count" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">0</span>
-                    </a>
-                    <div id="user-navbar-info" class="text-white small"></div>
-                </div>
-            </div>
-        </div>
-    </nav>
-
-    <div class="home-notice">
-        <div class="container d-flex flex-wrap justify-content-center gap-4 gap-md-5">
-            <span><i class="bi bi-truck"></i> Despachos rápidos</span>
-            <span><i class="bi bi-box-seam"></i> Stock actualizado</span>
-            <span><i class="bi bi-shield-check"></i> Compra segura</span>
-        </div>
-    </div>
-
-    <!-- Hero Banner -->
-    <header class="home-hero mb-5">
-        <div class="container">
-            <div class="home-hero-content">
-                <p class="home-hero-kicker">PROSTOCK / TIENDA ONLINE</p>
-                <h1>Todo para tu oficina, en un solo lugar.</h1>
-                <p class="home-hero-copy">Encuentra papelería, artículos escolares e insumos para mantener tu día en movimiento.</p>
-                <a href="productos.html" class="btn btn-warning btn-lg fw-bold mt-3">Comprar ahora <i class="bi bi-arrow-right ms-2"></i></a>
-            </div>
-        </div>
-    </header>
-
-    <section class="container home-categories mb-5" aria-label="Productos por categorías">
-        <p class="text-primary text-uppercase small fw-bold mb-2 text-center">Compra por categoría</p>
-        <h2 class="home-category-title">Productos por categorías</h2>
-        <p class="home-category-intro">Encuentra todo lo que necesitas para tu oficina, colegio y empresa.</p>
-        <div id="home-category-tabs" class="home-category-tabs" role="tablist" aria-label="Categorías de productos"></div>
-    </section>
-
-    <!-- Catálogo de Productos Destacados -->
-    <main class="container my-4">
-        <div class="d-flex justify-content-between align-items-center mb-4 border-bottom pb-2">
-            <h2>Productos destacados</h2>
-            <div class="d-flex gap-2 w-50">
-                <input type="text" id="input-buscar" class="form-control" placeholder="Buscar por nombre o código...">
-                <select id="filtro-categoria" class="form-select" aria-label="Filtrar productos por categoría">
-                    <option value="">Todas las categorías</option>
-                </select>
-            </div>
-        </div>
-
-        <div class="row" id="productos-container">
-            <!-- Renderizado dinámico desde js/main.js -->
-        </div>
-    </main>
-
-    <section class="sponsored-section mb-5" aria-label="Productos patrocinados">
-        <div class="container">
-            <div class="sponsored-heading">
-                <div>
-                    <p class="text-primary text-uppercase small fw-bold mb-1">Recomendados para ti</p>
-                    <h2 class="h3 mb-0">Productos patrocinados</h2>
-                </div>
-                <div class="sponsored-controls">
-                    <button type="button" id="sponsored-prev" class="sponsored-arrow" aria-label="Productos anteriores"><i class="bi bi-chevron-left"></i></button>
-                    <button type="button" id="sponsored-next" class="sponsored-arrow" aria-label="Productos siguientes"><i class="bi bi-chevron-right"></i></button>
-                </div>
-            </div>
-            <div id="sponsored-container" class="sponsored-track"></div>
-        </div>
-    </section>
-
-    <!-- Footer -->
-    <footer class="bg-dark text-white text-center py-4 mt-auto">
-        <div class="container">
-            <p class="mb-0">&copy; 2026 Prostock Inc. Todos los derechos reservados.</p>
-        </div>
-    </footer>
-
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="js/main.js"></script>
-</body>
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>prostock</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
 </html>
