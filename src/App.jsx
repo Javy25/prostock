@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
   BrowserRouter,
   Link,
@@ -11,123 +11,31 @@ import {
   useNavigate,
   useParams,
 } from 'react-router-dom'
-import productsSeed from '../data/productos.json'
 import regions from '../data/regiones.json'
-import { apiEnabled, apiRequest } from './api.js'
+import HomePage from './pages/HomePage.jsx'
+import { CategoriesPage, OffersPage, ProductsPage } from './features/catalog/CatalogPages.jsx'
+import StoreProvider from './store/StoreProvider.jsx'
+import { useStore } from './store/StoreContext.jsx'
+import { createProduct, deleteProduct, updateProduct } from './data/productRepository.js'
+import { addProductQuantityToCart } from './data/cart.js'
+import { removeCatalogProduct, saveCatalogProduct } from './services/catalogApi.js'
+import { createId, formatToday, money, withTax } from './utils/storeFormatters.js'
 
-const StoreContext = createContext(null)
-const money = value => `$${Number(value || 0).toLocaleString('es-CL')}`
-const withTax = value => Math.round(Number(value) * 1.19)
-const createId = () => Date.now()
-const formatToday = () => new Date().toLocaleDateString('es-CL')
 const pageTitles = {
-  '/': 'Inicio', '/productos': 'Catálogo de Productos', '/carrito': 'Carrito de Compras',
+  '/': 'Inicio', '/productos': 'Catálogo de Productos', '/categorias': 'Categorías',
+  '/ofertas': 'Ofertas', '/carrito': 'Carrito de Compras',
+  '/compra/confirmada': 'Compra exitosa', '/compra/error': 'Compra no completada',
   '/nosotros': 'Nosotros', '/blogs': 'Blog y Noticias', '/contacto': 'Contacto',
   '/login': 'Iniciar Sesión', '/registro': 'Crear una Cuenta', '/perfil': 'Mi Perfil',
 }
-const readStored = (key, fallback) => {
-  const stored = localStorage.getItem(key)
-  if (stored === null) {
-    localStorage.setItem(key, JSON.stringify(fallback))
-    return fallback
-  }
-  return JSON.parse(stored)
-}
-
-function useStoredValue(key, fallback) {
-  const [value, setValue] = useState(() => readStored(key, fallback))
-  const update = useCallback(nextValue => {
-    setValue(current => {
-      const resolved = typeof nextValue === 'function' ? nextValue(current) : nextValue
-      localStorage.setItem(key, JSON.stringify(resolved))
-      return resolved
-    })
-  }, [key])
-  return [value, update]
-}
-
-function StoreProvider({ children }) {
-  const [products, setProducts] = useStoredValue('productos_db', productsSeed)
-  const [cart, setCart] = useStoredValue('carrito', [])
-  const [users, setUsers] = useStoredValue('usuarios_db', [
-    { id: 999, nombre: 'Administrador Prostock', email: 'admin@duoc.cl', password: 'admin123', rol: 'ADMIN' },
-  ])
-  const [orders, setOrders] = useStoredValue('pedidos_db', [])
-  const [messages, setMessages] = useStoredValue('mensajes_contacto_db', [])
-  const [activeUser, setActiveUser] = useStoredValue('usuarioActivo', null)
-  const [apiError, setApiError] = useState('')
-  const [backendReady, setBackendReady] = useState(!apiEnabled)
-
-  const refreshBackend = useCallback(async (user = activeUser) => {
-    const remoteProducts = await apiRequest('/api/products')
-    setProducts(remoteProducts)
-    if (!user) return
-    const [remoteUsers, remoteOrders, remoteMessages] = await Promise.all([
-      user.rol === 'ADMIN' ? apiRequest('/api/users') : Promise.resolve(users),
-      apiRequest(user.rol === 'ADMIN' ? '/api/orders' : `/api/orders?usuarioId=${user.id}`),
-      user.rol === 'ADMIN' ? apiRequest('/api/messages') : Promise.resolve(messages),
-    ])
-    if (user.rol === 'ADMIN') setUsers(remoteUsers)
-    setOrders(remoteOrders.map(order => ({
-      ...order,
-      fecha: order.createdAt ? new Date(order.createdAt).toLocaleDateString('es-CL') : '',
-    })))
-    if (user.rol === 'ADMIN') setMessages(remoteMessages.map(message => ({
-      ...message,
-      fecha: message.fecha ? new Date(message.fecha).toLocaleDateString('es-CL') : '',
-    })))
-    setApiError('')
-  }, [activeUser, users, messages, setProducts, setUsers, setOrders, setMessages])
-
-  useEffect(() => {
-    if (!apiEnabled) return
-    if (!localStorage.getItem('prostock_access_token')) setActiveUser(null)
-    let active = true
-    apiRequest('/api/products')
-      .then(remoteProducts => {
-        if (active) setProducts(remoteProducts)
-      })
-      .catch(error => {
-        console.error('No fue posible cargar datos desde los microservicios.', error)
-        if (active) setApiError(`No fue posible conectar con el backend: ${error.message}`)
-      })
-      .finally(() => {
-        if (active) setBackendReady(true)
-      })
-    return () => { active = false }
-  }, [setActiveUser, setProducts])
-
-  useEffect(() => {
-    if (!apiEnabled && !users.some(user => user.email === 'admin@duoc.cl')) {
-      setUsers(current => current.some(user => user.email === 'admin@duoc.cl')
-        ? current
-        : [...current, {
-          id: 999, nombre: 'Administrador Prostock', email: 'admin@duoc.cl',
-          password: 'admin123', rol: 'ADMIN',
-        }])
-    }
-  }, [users, setUsers])
-  const value = useMemo(() => ({
-    products, setProducts, cart, setCart, users, setUsers, orders, setOrders,
-    messages, setMessages, activeUser, setActiveUser, apiEnabled, apiError,
-    setApiError, backendReady, refreshBackend,
-  }), [products, setProducts, cart, setCart, users, setUsers, orders, setOrders, messages, setMessages, activeUser, setActiveUser, apiError, setApiError, backendReady, refreshBackend])
-
-  return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>
-}
-
-function useStore() {
-  const store = useContext(StoreContext)
-  if (!store) throw new Error('useStore debe usarse dentro de StoreProvider')
-  return store
-}
-
 function Header() {
   const { cart, activeUser, setActiveUser } = useStore()
   const count = cart.reduce((total, item) => total + item.cantidad, 0)
   const links = [
     ['/', 'Inicio'],
     ['/productos', 'Productos'],
+    ['/categorias', 'Categorías'],
+    ['/ofertas', 'Ofertas'],
     ['/nosotros', 'Nosotros'],
     ['/blogs', 'Blog'],
     ['/contacto', 'Contacto'],
@@ -191,110 +99,6 @@ function BackendNotice() {
   return <div className="container mt-3"><div className="alert alert-danger mb-0" role="alert">{apiError}</div></div>
 }
 
-function ProductCard({ product }) {
-  const { cart, setCart } = useStore()
-  const addToCart = () => {
-    const found = cart.find(item => item.id === product.id)
-    if (found && found.cantidad >= product.stock) {
-      window.alert(`Solo hay ${product.stock} unidades disponibles.`)
-      return
-    }
-    setCart(current => {
-      const item = current.find(entry => entry.id === product.id)
-      return item
-        ? current.map(entry => entry.id === product.id ? { ...entry, cantidad: entry.cantidad + 1 } : entry)
-        : [...current, { ...product, cantidad: 1 }]
-    })
-  }
-
-  return (
-    <article className="col-sm-6 col-lg-4 col-xl-3 mb-4">
-      <div className="card h-100 shadow-sm border-0 product-card">
-        <Link to={`/producto/${product.id}`} aria-label={`Ver ${product.nombre}`}>
-          <img src={product.imagen} className="card-img-top" alt={product.nombre} style={{ height: 180, objectFit: 'cover' }} />
-        </Link>
-        <div className="card-body d-flex flex-column">
-          <small className="text-muted fw-bold">CÓD: {product.codigo}</small>
-          <h2 className="h6 fw-bold mt-2"><Link className="text-decoration-none text-dark" to={`/producto/${product.id}`}>{product.nombre}</Link></h2>
-          <span className="text-muted small">{product.categoria}</span>
-          <strong className="text-primary mt-2">{money(withTax(product.precio))} IVA incl.</strong>
-          <button className="btn btn-primary mt-auto mt-3" onClick={addToCart} disabled={product.stock <= 0}>
-            <i className="bi bi-cart-plus me-1" />Agregar al carrito
-          </button>
-        </div>
-      </div>
-    </article>
-  )
-}
-
-function HomePage() {
-  const { products } = useStore()
-  const categories = [...new Set(products.map(product => product.categoria))]
-  const [category, setCategory] = useState('')
-  const shownProducts = products.filter(product => !category || product.categoria === category).slice(0, 8)
-
-  return (
-    <>
-      <div className="home-notice"><div className="container"><span><i className="bi bi-truck" /> Despacho a todo Chile · Insumos para tu oficina</span></div></div>
-      <section className="home-hero">
-        <div className="container"><div className="home-hero-content">
-          <p className="home-hero-kicker">PROSTOCK · PAPELERÍA Y OFICINA</p>
-          <h1>Todo lo que tu oficina necesita</h1>
-          <p className="home-hero-copy">Encuentra insumos de calidad para trabajar mejor. Compra fácil, rápido y con despacho a todo Chile.</p>
-          <Link to="/productos" className="btn btn-warning btn-lg fw-bold mt-3">Explorar productos <i className="bi bi-arrow-right ms-2" /></Link>
-        </div></div>
-      </section>
-      <section className="home-categories container">
-        <h2 className="home-category-title">Compra por categoría</h2>
-        <p className="home-category-intro text-muted">Encuentra rápidamente los productos que buscas.</p>
-        <div className="home-category-tabs" role="tablist" aria-label="Categorías de productos">
-          <button className={`home-category-tab${category === '' ? ' active' : ''}`} onClick={() => setCategory('')}>Todos</button>
-          {categories.map(item => <button className={`home-category-tab${category === item ? ' active' : ''}`} key={item} onClick={() => setCategory(item)}>{item}</button>)}
-        </div>
-      </section>
-      <section className="container pb-4">
-        <div className="d-flex align-items-center justify-content-between mb-3">
-          <h2 className="h3 fw-bold mb-0">Productos destacados</h2>
-          <Link to="/productos">Ver catálogo <i className="bi bi-arrow-right" /></Link>
-        </div>
-        <div className="row">{shownProducts.map(product => <ProductCard key={product.id} product={product} />)}</div>
-      </section>
-      <section className="bg-light py-5">
-        <div className="container row g-4 mx-auto text-center">
-          <div className="col-md-4"><i className="bi bi-truck fs-2 text-primary" /><h3 className="h5 mt-2">Despacho confiable</h3><p className="text-muted">Llevamos tus compras hasta tu puerta.</p></div>
-          <div className="col-md-4"><i className="bi bi-box-seam fs-2 text-primary" /><h3 className="h5 mt-2">Amplio catálogo</h3><p className="text-muted">Insumos para empresas, estudio y hogar.</p></div>
-          <div className="col-md-4"><i className="bi bi-headset fs-2 text-primary" /><h3 className="h5 mt-2">Atención cercana</h3><p className="text-muted">Estamos para ayudarte con tus compras.</p></div>
-        </div>
-      </section>
-    </>
-  )
-}
-
-function ProductsPage() {
-  const { products } = useStore()
-  const [search, setSearch] = useState('')
-  const [category, setCategory] = useState('')
-  const categories = [...new Set(products.map(product => product.categoria))]
-  const filtered = products.filter(product => {
-    const searchMatches = `${product.codigo} ${product.nombre}`.toLowerCase().includes(search.toLowerCase())
-    return searchMatches && (!category || product.categoria === category)
-  })
-  return (
-    <main className="container my-5">
-      <div className="row align-items-center mb-4">
-        <div className="col-md-6"><h1 className="h2">Catálogo de Productos</h1></div>
-        <div className="col-md-6"><div className="d-flex gap-2">
-          <input className="form-control" value={search} onChange={event => setSearch(event.target.value)} placeholder="Buscar por código o nombre..." aria-label="Buscar productos" />
-          <select className="form-select" value={category} onChange={event => setCategory(event.target.value)} aria-label="Filtrar productos por categoría">
-            <option value="">Todas las categorías</option>{categories.map(item => <option key={item}>{item}</option>)}
-          </select>
-        </div></div>
-      </div>
-      <div className="row">{filtered.length ? filtered.map(product => <ProductCard key={product.id} product={product} />) : <p className="col-12 text-center py-5 text-muted">No hay productos disponibles.</p>}</div>
-    </main>
-  )
-}
-
 function ProductDetailPage() {
   const { id } = useParams()
   const { products, cart, setCart } = useStore()
@@ -303,17 +107,11 @@ function ProductDetailPage() {
   if (!product) return <main className="container my-5 text-center"><h1 className="h3">Producto no encontrado</h1><Link to="/productos" className="btn btn-primary mt-3">Volver al catálogo</Link></main>
   const images = product.imagenes?.length ? product.imagenes : [product.imagen]
   const addToCart = () => {
-    const currentQuantity = cart.find(item => item.id === product.id)?.cantidad || 0
-    if (currentQuantity + quantity > product.stock) {
+    if (!addProductQuantityToCart(cart, product, quantity)) {
       window.alert(`Solo hay ${product.stock} unidades disponibles.`)
       return
     }
-    setCart(current => {
-      const item = current.find(entry => entry.id === product.id)
-      return item
-        ? current.map(entry => entry.id === product.id ? { ...entry, cantidad: entry.cantidad + quantity } : entry)
-        : [...current, { ...product, cantidad: quantity }]
-    })
+    setCart(current => addProductQuantityToCart(current, product, quantity) || current)
   }
   return <main className="container my-5"><div className="row bg-white p-4 rounded shadow-sm border">
     <div className="col-md-6 text-center">
@@ -336,8 +134,10 @@ function ProductDetailPage() {
 
 function CartPage() {
   const { cart, setCart, products, setProducts, activeUser, orders, setOrders, apiEnabled, apiRequest, refreshBackend, setApiError } = useStore()
+  const navigate = useNavigate()
   const [checkout, setCheckout] = useState(false)
   const [notice, setNotice] = useState('')
+  const [deliveryMethod, setDeliveryMethod] = useState('Despacho estándar')
   const [shipping, setShipping] = useState(() => ({
     nombre: activeUser?.nombre || '', telefono: activeUser?.telefono || '',
     direccion: activeUser?.direccion || '', comuna: activeUser?.comuna || '',
@@ -380,7 +180,10 @@ function CartPage() {
               cantidad: item.cantidad,
               precioNeto: item.precio,
             })),
-            despacho: shipping,
+            despacho: {
+              ...shipping,
+              observaciones: [shipping.observaciones, `Modalidad: ${deliveryMethod}`].filter(Boolean).join(' | '),
+            },
           }),
         })
         setOrders(current => [...current, {
@@ -389,12 +192,15 @@ function CartPage() {
         }])
         setCart([])
         setCheckout(false)
-        setNotice('¡Pedido confirmado! Puedes revisar el pedido en tu perfil.')
+        navigate('/compra/confirmada', { state: { order: {
+          ...order,
+          fecha: order.createdAt ? new Date(order.createdAt).toLocaleDateString('es-CL') : formatToday(),
+        } } })
         refreshBackend(activeUser).catch(error => {
           setApiError(`El pedido se confirmó, pero no se pudo actualizar la vista: ${error.message}`)
         })
       } catch (error) {
-        setNotice(`No se pudo confirmar el pedido: ${error.message}`)
+        navigate('/compra/error', { state: { message: error.message } })
       }
       return
     }
@@ -404,13 +210,14 @@ function CartPage() {
     })
     const order = {
       id: createId(), usuarioId: activeUser.id, fecha: formatToday(),
-      subtotal, iva: total - subtotal, total, estado: 'Confirmado', items: cart, despacho: shipping,
+      subtotal, iva: total - subtotal, total, estado: 'Confirmado', items: cart,
+      despacho: { ...shipping, observaciones: [shipping.observaciones, `Modalidad: ${deliveryMethod}`].filter(Boolean).join(' | ') },
     }
     setProducts(updatedProducts)
     setOrders([...orders, order])
     setCart([])
     setCheckout(false)
-    setNotice('¡Pedido confirmado! Puedes revisar el pedido en tu perfil.')
+    navigate('/compra/confirmada', { state: { order } })
   }
   return <main className="container my-5">
     <h1 className="h2 mb-4"><i className="bi bi-cart3" /> Carrito de Compras</h1>
@@ -443,6 +250,11 @@ function CartPage() {
     </div>
     {checkout && <section className="card mt-4"><div className="card-body"><h2 className="h4">Datos de despacho</h2>
       <form className="row g-3" onSubmit={checkoutOrder}>
+        <div className="col-12"><label className="form-label" htmlFor="delivery-method">Modalidad de entrega</label>
+          <select id="delivery-method" className="form-select" value={deliveryMethod} onChange={event => setDeliveryMethod(event.target.value)} required>
+            <option>Despacho estándar</option><option>Despacho programado</option>
+          </select>
+        </div>
         {['nombre', 'telefono', 'direccion', 'comuna', 'region'].map(field => <div className="col-md-6" key={field}>
           <label className="form-label" htmlFor={`shipping-${field}`}>{field[0].toUpperCase() + field.slice(1)}</label>
           <input id={`shipping-${field}`} className="form-control" required value={shipping[field]} onChange={event => setShipping({ ...shipping, [field]: event.target.value })} />
@@ -451,6 +263,35 @@ function CartPage() {
         <div className="col-12 d-flex gap-2"><button className="btn btn-success" type="submit">Confirmar Pedido</button><button className="btn btn-secondary" type="button" onClick={() => setCheckout(false)}>Cancelar</button></div>
       </form>
     </div></section>}
+  </main>
+}
+
+function CheckoutResultPage({ success }) {
+  const { state } = useLocation()
+  const order = state?.order
+  if (!success) return <main className="container my-5">
+    <div className="alert alert-danger" role="alert"><h1 className="h3">No se pudo completar la compra</h1><p className="mb-0">{state?.message || 'Vuelve al carrito para intentar confirmar el pedido nuevamente.'}</p></div>
+    <Link className="btn btn-primary" to="/carrito">Volver al carrito</Link>
+  </main>
+  if (!order) return <main className="container my-5">
+    <div className="alert alert-success" role="status"><h1 className="h3">Compra confirmada</h1><p className="mb-0">Tu pedido fue registrado. Inicia sesión para revisar su detalle.</p></div>
+    <Link className="btn btn-primary" to="/perfil">Ver mi perfil</Link>
+  </main>
+  return <main className="container my-5">
+    <div className="alert alert-success" role="status"><h1 className="h3">¡Compra exitosa!</h1><p className="mb-0">Tu pedido #{order.id} fue confirmado.</p></div>
+    <section className="card shadow-sm border-0">
+      <div className="card-body"><h2 className="h5">Resumen de compra</h2>
+        <p className="mb-2">Fecha: {order.fecha || formatToday()}</p>
+        <p className="mb-3">Estado: {order.estado}</p>
+        <ul className="list-group list-group-flush mb-3">{order.items?.map((item, index) =>
+          <li className="list-group-item d-flex justify-content-between" key={item.id || item.productoId || index}>
+            <span>{item.nombre} × {item.cantidad}</span><span>{money(item.totalLinea || withTax(item.precio) * item.cantidad)}</span>
+          </li>)}
+        </ul>
+        <div className="d-flex justify-content-between fw-bold"><span>Total</span><span>{money(order.total)}</span></div>
+      </div>
+    </section>
+    <Link className="btn btn-primary mt-3" to="/productos">Seguir comprando</Link>
   </main>
 }
 
@@ -715,13 +556,13 @@ function AdminDashboard() {
 }
 
 function AdminProductsPage() {
-  const { products, setProducts, apiEnabled, apiRequest } = useStore()
+  const { products, setProducts, apiEnabled } = useStore()
   const sorted = [...products].sort((a, b) => Number(a.id) - Number(b.id))
   const remove = async id => {
     if (!window.confirm('¿Seguro de eliminar este producto?')) return
     try {
-      if (apiEnabled) await apiRequest(`/api/products/${id}`, { method: 'DELETE' })
-      setProducts(current => current.filter(product => product.id !== id))
+      if (apiEnabled) await removeCatalogProduct(id)
+      setProducts(current => deleteProduct(current, id))
     } catch (error) {
       window.alert(`No se pudo eliminar el producto: ${error.message}`)
     }
@@ -736,7 +577,7 @@ function AdminProductsPage() {
 
 function AdminProductForm() {
   const { id } = useParams()
-  const { products, setProducts, apiEnabled, apiRequest } = useStore()
+  const { products, setProducts, apiEnabled } = useStore()
   const navigate = useNavigate()
   const product = products.find(item => String(item.id) === id)
   const [error, setError] = useState('')
@@ -761,20 +602,19 @@ function AdminProductForm() {
     const next = { ...payload, id: product?.id || createId() }
     if (apiEnabled) {
       try {
-        const saved = await apiRequest(product ? `/api/products/${product.id}` : '/api/products', {
-          method: product ? 'PUT' : 'POST',
-          body: JSON.stringify(payload),
-        })
+        const saved = await saveCatalogProduct(payload, product?.id)
         setProducts(current => product
-          ? current.map(item => item.id === product.id ? saved : item)
-          : [...current, saved])
+          ? updateProduct(current, product.id, saved)
+          : createProduct(current, saved))
         navigate('/admin/productos')
       } catch (requestError) {
         setError(requestError.message)
       }
       return
     }
-    setProducts(product ? products.map(item => item.id === product.id ? next : item) : [...products, next])
+    setProducts(product
+      ? updateProduct(products, product.id, next)
+      : createProduct(products, next))
     navigate('/admin/productos')
   }
   if (id && !product) return <><h1 className="h3">Producto no encontrado.</h1><Link to="/admin/productos">Volver a productos</Link></>
@@ -949,8 +789,12 @@ export default function App() {
     <Route element={<SiteLayout />}>
       <Route index element={<HomePage />} />
       <Route path="productos" element={<ProductsPage />} />
+      <Route path="categorias" element={<CategoriesPage />} />
+      <Route path="ofertas" element={<OffersPage />} />
       <Route path="producto/:id" element={<ProductDetailPage />} />
       <Route path="carrito" element={<CartPage />} />
+      <Route path="compra/confirmada" element={<CheckoutResultPage success />} />
+      <Route path="compra/error" element={<CheckoutResultPage success={false} />} />
       <Route path="nosotros" element={<AboutPage />} />
       <Route path="blogs" element={<BlogPage />} />
       <Route path="blogs/:slug" element={<BlogDetailPage />} />
