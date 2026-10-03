@@ -17,6 +17,10 @@ import { CategoriesPage, OffersPage, ProductsPage } from './features/catalog/Cat
 import StoreProvider from './store/StoreProvider.jsx'
 import { useStore } from './store/StoreContext.jsx'
 import { createProduct, deleteProduct, updateProduct } from './data/productRepository.js'
+import { addCategory, getAvailableCategories } from './data/categoryRepository.js'
+import { CRITICAL_STOCK_THRESHOLD, getCriticalProducts, getProductReport } from './data/productReports.js'
+import { getOfferCartProduct, getOfferPrice, isProductOnOffer } from './data/offers.js'
+import { getGeneralReport } from './data/generalReports.js'
 import { addProductQuantityToCart } from './data/cart.js'
 import { removeCatalogProduct, saveCatalogProduct } from './services/catalogApi.js'
 import { createId, formatToday, money, withTax } from './utils/storeFormatters.js'
@@ -113,12 +117,15 @@ function ProductDetailPage() {
     const currentIndex = current.productId === id ? current.index : 0
     return { productId: id, index: (currentIndex + offset + images.length) % images.length }
   })
+  const onOffer = isProductOnOffer(product)
+  const currentPrice = getOfferPrice(product)
   const addToCart = () => {
-    if (!addProductQuantityToCart(cart, product, quantity)) {
+    const cartProduct = getOfferCartProduct(product)
+    if (!addProductQuantityToCart(cart, cartProduct, quantity)) {
       window.alert(`Solo hay ${product.stock} unidades disponibles.`)
       return
     }
-    setCart(current => addProductQuantityToCart(current, product, quantity) || current)
+    setCart(current => addProductQuantityToCart(current, cartProduct, quantity) || current)
   }
   return <main className="container my-5"><div className="row bg-white p-4 rounded shadow-sm border">
     <div className="col-md-6 text-center">
@@ -149,7 +156,9 @@ function ProductDetailPage() {
     <div className="col-md-6 d-flex flex-column justify-content-center">
       <span className="badge bg-secondary mb-2 align-self-start">{product.categoria}</span>
       <h1 className="h2">{product.nombre}</h1><p className="text-muted">SKU / Código: <strong>{product.codigo}</strong></p>
-      <h2 className="text-primary fw-bold my-3">{money(withTax(product.precio))}</h2>
+      {onOffer && <span className="badge bg-danger align-self-start">En oferta</span>}
+      {onOffer && <p className="text-muted text-decoration-line-through mb-0 mt-3">Precio original: {money(withTax(product.precio))}</p>}
+      <h2 className={`${onOffer ? 'text-danger' : 'text-primary'} fw-bold my-3`}>{money(withTax(currentPrice))}</h2>
       <p className="text-muted small">Precio con IVA incluido</p><p>Stock disponible: <strong>{product.stock} unidades</strong></p>
       <div className="d-flex gap-2 mt-3">
         <input className="form-control" type="number" min="1" max={product.stock} value={quantity} onChange={event => setQuantity(Math.max(1, Number(event.target.value)))} aria-label="Cantidad" style={{ maxWidth: 90 }} />
@@ -255,7 +264,7 @@ function CartPage() {
         <table className="table table-hover align-middle mb-0"><thead className="table-light"><tr><th>Producto</th><th>Precio</th><th>Cantidad</th><th>Subtotal</th><th>Acción</th></tr></thead>
           <tbody>{cart.length ? cart.map(item => <tr key={item.id}>
             <td><img src={item.imagen} width="50" height="50" className="rounded object-fit-cover me-2" alt="" /><span className="fw-bold">{item.nombre}</span></td>
-            <td>{money(withTax(item.precio))}</td><td><div className="input-group input-group-sm" style={{ width: 110 }}>
+            <td>{item.precioOriginal && item.precioOriginal > item.precio && <div className="small text-muted text-decoration-line-through">{money(withTax(item.precioOriginal))}</div>}{money(withTax(item.precio))}</td><td><div className="input-group input-group-sm" style={{ width: 110 }}>
               <button className="btn btn-outline-secondary" onClick={() => setQuantity(item.id, -1)} aria-label="Restar una unidad">-</button><span className="form-control text-center">{item.cantidad}</span>
               <button className="btn btn-outline-secondary" onClick={() => setQuantity(item.id, 1)} aria-label="Agregar una unidad">+</button></div></td>
             <td className="fw-bold">{money(withTax(item.precio) * item.cantidad)}</td>
@@ -640,9 +649,161 @@ function AdminLayout() {
   const { activeUser } = useStore()
   const location = useLocation()
   if (activeUser?.rol !== 'ADMIN') return <main className="container my-5 text-center"><h1 className="h3">Acceso restringido a administradores.</h1><Link className="btn btn-primary mt-3" to="/login">Iniciar sesión como administrador</Link></main>
-  const links = [['/admin', 'Dashboard'], ['/admin/pedidos', 'Órdenes y Boletas'], ['/admin/productos', 'Productos'], ['/admin/usuarios', 'Usuarios'], ['/admin/mensajes', 'Mensajes']]
+  const links = [
+    ['/admin', 'Dashboard'],
+    ['/admin/pedidos', 'Órdenes y Boletas'],
+    ['/admin/productos', 'Productos'],
+    ['/admin/productos/criticos', 'Productos críticos'],
+    ['/admin/productos/reportes', 'Reportes de productos'],
+    ['/admin/categorias', 'Categorías'],
+    ['/admin/reportes', 'Reportes Generales'],
+    ['/admin/usuarios', 'Usuarios'],
+    ['/admin/mensajes', 'Mensajes'],
+  ]
   return <><nav className="navbar navbar-expand navbar-dark bg-dark"><div className="container-fluid"><Link className="navbar-brand" to="/admin"><img src="/img/logo-prostock.svg" className="brand-logo" alt="Prostock" /> <span className="admin-label">ADMIN</span></Link><Link to="/" className="btn btn-outline-light btn-sm">Volver a la Tienda</Link></div></nav><BackendNotice />
     <div className="container-fluid my-4"><div className="row"><aside className="col-md-3 col-lg-2 mb-3"><div className="list-group shadow-sm">{links.map(([to, label]) => <NavLink key={to} to={to} end={to === '/admin'} className={({ isActive }) => `list-group-item list-group-item-action${isActive || (to !== '/admin' && location.pathname.startsWith(to)) ? ' active' : ''}`}>{label}</NavLink>)}</div></aside><section className="col-md-9 col-lg-10"><Outlet /></section></div></div>
+  </>
+}
+
+function AdminCriticalProductsPage() {
+  const { products } = useStore()
+  const criticalProducts = getCriticalProducts(products)
+  return <>
+    <h1 className="h3 mb-2">Productos críticos</h1>
+    <p className="text-muted mb-3">Se consideran críticos los productos con stock igual o inferior a {CRITICAL_STOCK_THRESHOLD} unidades.</p>
+    <div className="card border-0 shadow-sm"><div className="table-responsive">
+      <table className="table table-hover align-middle mb-0">
+        <thead className="table-dark"><tr><th>Producto</th><th>Código</th><th>Categoría</th><th>Stock actual</th></tr></thead>
+        <tbody>
+          {criticalProducts.map(product => <tr key={product.id}>
+            <td>{product.nombre}</td><td>{product.codigo || 'No disponible'}</td>
+            <td>{product.categoria || 'Sin categoría'}</td><td><span className="badge bg-warning text-dark">{product.stock}</span></td>
+          </tr>)}
+          {!criticalProducts.length && <tr><td colSpan="4" className="text-center text-muted py-4">No hay productos críticos según el umbral de stock actual.</td></tr>}
+        </tbody>
+      </table>
+    </div></div>
+  </>
+}
+
+function AdminProductReportsPage() {
+  const { products, orders } = useStore()
+  const report = getProductReport(products, orders)
+  return <>
+    <h1 className="h3 mb-3">Reportes de productos</h1>
+    <div className="row g-3 mb-4">
+      <div className="col-md-4"><div className="card border-0 shadow-sm h-100"><div className="card-body"><h2 className="h6 text-muted">Productos registrados</h2><p className="h3 mb-0">{report.productCount}</p></div></div></div>
+      <div className="col-md-4"><div className="card border-0 shadow-sm h-100"><div className="card-body"><h2 className="h6 text-muted">Stock disponible</h2><p className="h3 mb-0">{report.availableStock} unidades</p></div></div></div>
+      <div className="col-md-4"><div className="card border-0 shadow-sm h-100"><div className="card-body"><h2 className="h6 text-muted">Productos críticos</h2><p className="h3 mb-0">{report.criticalProducts.length}</p><Link to="/admin/productos/criticos">Ver listado</Link></div></div></div>
+    </div>
+    <h2 className="h5">Productos por categoría</h2>
+    <div className="card border-0 shadow-sm mb-4"><div className="table-responsive">
+      <table className="table table-hover align-middle mb-0">
+        <thead className="table-dark"><tr><th>Categoría</th><th>Productos</th><th>Stock disponible</th></tr></thead>
+        <tbody>
+          {report.categories.map(category => <tr key={category.name}><td>{category.name}</td><td>{category.products}</td><td>{category.stock}</td></tr>)}
+          {!report.categories.length && <tr><td colSpan="3" className="text-center text-muted py-4">No hay productos para reportar.</td></tr>}
+        </tbody>
+      </table>
+    </div></div>
+    <h2 className="h5">Ventas por producto registradas en pedidos</h2>
+    <p className="text-muted">Los importes se calculan exclusivamente desde las líneas de pedidos existentes.</p>
+    <div className="card border-0 shadow-sm"><div className="table-responsive">
+      <table className="table table-hover align-middle mb-0">
+        <thead className="table-dark"><tr><th>Producto</th><th>Unidades vendidas</th><th>Total de líneas</th></tr></thead>
+        <tbody>
+          {report.salesByProduct.map(sale => <tr key={sale.key}><td>{sale.name}</td><td>{sale.units}</td><td>{money(sale.total)}</td></tr>)}
+          {!report.salesByProduct.length && <tr><td colSpan="3" className="text-center text-muted py-4">No hay líneas de pedidos para calcular ventas por producto.</td></tr>}
+        </tbody>
+      </table>
+    </div></div>
+  </>
+}
+
+function AdminGeneralReportsPage() {
+  const { products, users, orders, messages, categories } = useStore()
+  const report = getGeneralReport({ products, users, orders, messages, categories })
+  const stats = [
+    ['Productos', report.productCount, 'primary', 'box-seam'],
+    ['Usuarios', report.userCount, 'success', 'people'],
+    ['Pedidos', report.orderCount, 'info', 'bag-check'],
+    ['Ventas registradas', money(report.salesTotal), 'dark', 'cash-stack'],
+    ['Productos críticos', report.criticalProductCount, 'warning', 'exclamation-triangle'],
+    ['Categorías', report.categoryCount, 'secondary', 'tags'],
+    ['Mensajes registrados', report.messageCount, 'primary', 'envelope'],
+  ]
+  return <>
+    <h1 className="h3 mb-3">Reportes Generales</h1>
+    <div className="row g-3 mb-4">
+      {stats.map(([label, value, color, icon]) => <div className="col-md-6 col-xl-4" key={label}>
+        <div className={`card border-0 shadow-sm h-100 bg-${color} ${color === 'info' || color === 'warning' ? 'text-dark' : 'text-white'}`}>
+          <div className="card-body d-flex justify-content-between align-items-center">
+            <div><h2 className="h6 text-uppercase">{label}</h2><p className="h3 mb-0">{value}</p></div>
+            <i className={`bi bi-${icon} fs-2`} />
+          </div>
+        </div>
+      </div>)}
+    </div>
+    <h2 className="h5">Pedidos por estado</h2>
+    <div className="card border-0 shadow-sm mb-4"><div className="table-responsive">
+      <table className="table table-hover align-middle mb-0">
+        <thead className="table-dark"><tr><th>Estado</th><th>Pedidos</th></tr></thead>
+        <tbody>
+          {report.ordersByStatus.map(item => <tr key={item.status}><td>{item.status}</td><td>{item.count}</td></tr>)}
+          {!report.ordersByStatus.length && <tr><td colSpan="2" className="text-center text-muted py-4">No hay pedidos registrados.</td></tr>}
+        </tbody>
+      </table>
+    </div></div>
+    <h2 className="h5">Productos por categoría</h2>
+    <div className="card border-0 shadow-sm"><div className="table-responsive">
+      <table className="table table-hover align-middle mb-0">
+        <thead className="table-dark"><tr><th>Categoría</th><th>Productos</th><th>Stock disponible</th></tr></thead>
+        <tbody>
+          {report.productsByCategory.map(item => <tr key={item.name}><td>{item.name}</td><td>{item.products}</td><td>{item.stock}</td></tr>)}
+          {!report.productsByCategory.length && <tr><td colSpan="3" className="text-center text-muted py-4">No hay productos para resumir por categoría.</td></tr>}
+        </tbody>
+      </table>
+    </div></div>
+  </>
+}
+
+function AdminCategoriesPage() {
+  const { categories, setCategories, products } = useStore()
+  const [error, setError] = useState('')
+  const availableCategories = getAvailableCategories(categories, products)
+  const submit = event => {
+    event.preventDefault()
+    const form = new FormData(event.currentTarget)
+    const category = String(form.get('categoria') || '').trim()
+    if (!category) {
+      setError('Ingresa el nombre de la categoría.')
+      return
+    }
+    if (availableCategories.some(item => item.toLocaleLowerCase('es') === category.toLocaleLowerCase('es'))) {
+      setError('Esa categoría ya existe.')
+      return
+    }
+    setCategories(current => addCategory(current, category))
+    event.currentTarget.reset()
+    setError('')
+  }
+  return <>
+    <h1 className="h3 mb-3">Categorías</h1>
+    <div className="card border-0 shadow-sm mb-4"><div className="card-body">
+      <h2 className="h5">Nueva categoría</h2>
+      {error && <div className="alert alert-danger" role="alert">{error}</div>}
+      <form className="row g-2 align-items-end" onSubmit={submit}>
+        <div className="col-md-8"><label className="form-label" htmlFor="new-category">Nombre</label><input className="form-control" id="new-category" name="categoria" maxLength="80" required /></div>
+        <div className="col-md-4"><button className="btn btn-primary w-100">Crear categoría</button></div>
+      </form>
+    </div></div>
+    <h2 className="h5">Categorías disponibles</h2>
+    <div className="card border-0 shadow-sm"><ul className="list-group list-group-flush">
+      {availableCategories.map(category => <li className="list-group-item d-flex justify-content-between" key={category}>
+        <span>{category}</span><span className="text-muted">{products.filter(product => product.categoria === category).length} productos</span>
+      </li>)}
+      {!availableCategories.length && <li className="list-group-item text-muted">No hay categorías disponibles.</li>}
+    </ul></div>
   </>
 }
 
@@ -730,9 +891,10 @@ function AdminProductsPage() {
 
 function AdminProductForm() {
   const { id } = useParams()
-  const { products, setProducts, apiEnabled } = useStore()
+  const { products, categories, setProducts, apiEnabled } = useStore()
   const navigate = useNavigate()
   const product = products.find(item => String(item.id) === id)
+  const availableCategories = getAvailableCategories(categories, products)
   const [error, setError] = useState('')
   const submit = async event => {
     event.preventDefault()
@@ -778,10 +940,7 @@ function AdminProductForm() {
       <Field name="nombre" label="Nombre" defaultValue={product?.nombre} />
       <div className="mb-3"><label className="form-label" htmlFor="product-category">Categoría</label><select id="product-category" name="categoria" className="form-select" required defaultValue={product?.categoria || ''}>
         <option value="">Seleccione...</option>
-        <option value="Papelería y Oficina">Papelería y Oficina</option>
-        <option value="Escolar">Escolar</option>
-        <option value="Aseo y Limpieza">Aseo y Limpieza</option>
-        <option value="Insumos">Insumos</option>
+        {availableCategories.map(category => <option key={category} value={category}>{category}</option>)}
       </select></div>
       <div className="row"><div className="col-md-6"><Field name="precio" label="Precio neto" type="number" min="1" defaultValue={product?.precio} /></div><div className="col-md-6"><Field name="stock" label="Stock" type="number" min="0" defaultValue={product?.stock} /></div></div>
       <div className="mb-3"><label className="form-label" htmlFor="product-images">Imágenes (una URL por línea)</label><textarea className="form-control" id="product-images" name="imagenes" required rows="3" defaultValue={product?.imagenes?.join('\n') || product?.imagen || ''} /></div>
@@ -999,7 +1158,11 @@ export default function App() {
       <Route index element={<AdminDashboard />} />
       <Route path="pedidos" element={<AdminOrdersPage />} />
       <Route path="pedidos/:id" element={<AdminOrderDetailPage />} />
+      <Route path="categorias" element={<AdminCategoriesPage />} />
+      <Route path="reportes" element={<AdminGeneralReportsPage />} />
       <Route path="productos" element={<AdminProductsPage />} />
+      <Route path="productos/criticos" element={<AdminCriticalProductsPage />} />
+      <Route path="productos/reportes" element={<AdminProductReportsPage />} />
       <Route path="productos/nuevo" element={<AdminProductForm />} />
       <Route path="productos/:id" element={<AdminProductForm />} />
       <Route path="usuarios" element={<AdminUsersPage />} />

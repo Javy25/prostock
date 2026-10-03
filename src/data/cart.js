@@ -4,7 +4,7 @@ export function addProductQuantityToCart(cart, product, quantity = 1) {
   if (!Number.isInteger(quantity) || quantity < 1 || nextQuantity > product.stock) return null
 
   return current
-    ? cart.map(item => item.id === product.id ? { ...item, cantidad: nextQuantity } : item)
+    ? cart.map(item => item.id === product.id ? { ...product, cantidad: nextQuantity } : item)
     : [...cart, { ...product, cantidad: nextQuantity }]
 }
 

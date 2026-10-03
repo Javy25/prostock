@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { apiEnabled, apiRequest } from '../api.js'
-import { readProducts } from '../data/productRepository.js'
+import { applySeedOffers, readProducts } from '../data/productRepository.js'
+import { readCategories } from '../data/categoryRepository.js'
 import { listCatalogProducts } from '../services/catalogApi.js'
 import { StoreContext } from './StoreContext.jsx'
 
@@ -27,7 +28,14 @@ function useStoredValue(key, fallback, persist, initialize = () => readStored(ke
 }
 
 export default function StoreProvider({ children }) {
-  const [products, setProducts] = useStoredValue('productos_db', apiEnabled ? [] : readProducts(), !apiEnabled)
+  const [products, setProducts] = useStoredValue('productos_db', apiEnabled ? [] : readProducts(), !apiEnabled, () => {
+    const storedProducts = readStored('productos_db', apiEnabled ? [] : readProducts(), !apiEnabled)
+    if (apiEnabled) return storedProducts
+    const productsWithOffers = applySeedOffers(storedProducts)
+    if (productsWithOffers !== storedProducts) localStorage.setItem('productos_db', JSON.stringify(productsWithOffers))
+    return productsWithOffers
+  })
+  const [categories, setCategories] = useStoredValue('categorias_db', readCategories(), true)
   const [cart, setCart] = useStoredValue('carrito', [], true)
   const [users, setUsers] = useStoredValue('usuarios_db', apiEnabled ? [] : [
     { id: 999, nombre: 'Administrador Prostock', email: 'admin@duoc.cl', password: 'admin123', rol: 'ADMIN' },
@@ -90,10 +98,10 @@ export default function StoreProvider({ children }) {
   }, [users, setUsers])
 
   const value = useMemo(() => ({
-    products, setProducts, cart, setCart, users, setUsers, orders, setOrders,
+    products, setProducts, categories, setCategories, cart, setCart, users, setUsers, orders, setOrders,
     messages, setMessages, activeUser, setActiveUser, apiEnabled, apiError,
     setApiError, refreshBackend,
-  }), [products, setProducts, cart, setCart, users, setUsers, orders, setOrders, messages, setMessages, activeUser, setActiveUser, apiError, setApiError, refreshBackend])
+  }), [products, setProducts, categories, setCategories, cart, setCart, users, setUsers, orders, setOrders, messages, setMessages, activeUser, setActiveUser, apiError, setApiError, refreshBackend])
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>
 }

@@ -1,4 +1,4 @@
-import { createProduct, deleteProduct, readProducts, updateProduct } from '../src/data/productRepository.js'
+import { applySeedOffers, createProduct, deleteProduct, readProducts, updateProduct } from '../src/data/productRepository.js'
 
 describe('repositorio de productos', () => {
   const products = [
@@ -36,5 +36,13 @@ describe('repositorio de productos', () => {
   it('no cambia productos cuando el id no existe', () => {
     expect(updateProduct(products, 99, { id: 99, nombre: 'Nuevo' })).toEqual(products)
     expect(deleteProduct(products, 99)).toEqual(products)
+  })
+
+  it('aplica los precios de oferta del catálogo simulado a productos locales existentes', () => {
+    const stored = [{ id: 1, nombre: 'Cuaderno', precio: 1000, stock: 7 }]
+    const seed = [{ id: 1, precio: 1000, precioOferta: 900 }]
+
+    expect(applySeedOffers(stored, seed)).toEqual([{ ...stored[0], precioOferta: 900 }])
+    expect('precioOferta' in stored[0]).toBeFalse()
   })
 })

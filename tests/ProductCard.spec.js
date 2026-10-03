@@ -32,12 +32,12 @@ describe('tarjeta de producto', () => {
     container.remove()
   })
 
-  function renderCard(cart = []) {
+  function renderCard(cart = [], productData = product) {
     act(() => {
       root.render(
         <MemoryRouter>
           <StoreContext.Provider value={{ cart, setCart }}>
-            <ProductCard product={product} />
+            <ProductCard product={productData} />
           </StoreContext.Provider>
         </MemoryRouter>,
       )
@@ -74,5 +74,24 @@ describe('tarjeta de producto', () => {
     ))
 
     expect(container.querySelector('button').disabled).toBeTrue()
+  })
+
+  it('muestra el precio original y agrega al carrito con el precio de oferta', () => {
+    const offeredProduct = { ...product, precioOferta: 3990 }
+    renderCard([], offeredProduct)
+
+    expect(container.textContent).toContain('En oferta')
+    expect(container.textContent).toContain('$5.462 precio original')
+    expect(container.textContent).toContain('$4.748 IVA incl.')
+
+    act(() => container.querySelector('button').click())
+
+    const update = setCart.calls.mostRecent().args[0]
+    expect(update([])).toEqual([{
+      ...offeredProduct,
+      precioOriginal: product.precio,
+      precio: offeredProduct.precioOferta,
+      cantidad: 1,
+    }])
   })
 })

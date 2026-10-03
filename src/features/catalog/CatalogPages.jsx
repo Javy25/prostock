@@ -1,6 +1,7 @@
 import { Link, useSearchParams } from 'react-router-dom'
 import ProductCard from '../../components/ProductCard.jsx'
 import ProductCatalog from '../../components/ProductCatalog.jsx'
+import { getOfferProducts } from '../../data/offers.js'
 import { useStore } from '../../store/StoreContext.jsx'
 
 export function ProductsPage() {
@@ -37,7 +38,7 @@ export function CategoriesPage() {
 
 export function OffersPage() {
   const { products } = useStore()
-  const offers = products.filter(product => Number(product.precioOferta) > 0 && Number(product.precioOferta) < Number(product.precio))
+  const offers = getOfferProducts(products)
   return <main className="container my-5">
     <h1 className="h2 mb-2">Ofertas</h1>
     <p className="text-muted mb-4">Productos con un precio de oferta publicado en el catálogo.</p>
