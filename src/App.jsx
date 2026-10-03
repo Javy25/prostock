@@ -104,8 +104,15 @@ function ProductDetailPage() {
   const { products, cart, setCart } = useStore()
   const product = products.find(item => String(item.id) === id)
   const [quantity, setQuantity] = useState(1)
+  const [imageSelection, setImageSelection] = useState({ productId: id, index: 0 })
   if (!product) return <main className="container my-5 text-center"><h1 className="h3">Producto no encontrado</h1><Link to="/productos" className="btn btn-primary mt-3">Volver al catálogo</Link></main>
   const images = product.imagenes?.length ? product.imagenes : [product.imagen]
+  const selectedImage = imageSelection.productId === id ? imageSelection.index : 0
+  const activeImage = Math.min(selectedImage, images.length - 1)
+  const changeImage = offset => setImageSelection(current => {
+    const currentIndex = current.productId === id ? current.index : 0
+    return { productId: id, index: (currentIndex + offset + images.length) % images.length }
+  })
   const addToCart = () => {
     if (!addProductQuantityToCart(cart, product, quantity)) {
       window.alert(`Solo hay ${product.stock} unidades disponibles.`)
@@ -115,8 +122,29 @@ function ProductDetailPage() {
   }
   return <main className="container my-5"><div className="row bg-white p-4 rounded shadow-sm border">
     <div className="col-md-6 text-center">
-      <img src={images[0]} className="img-fluid product-detail-image" alt={product.nombre} />
-      {images.length > 1 && <div className="d-flex gap-2 justify-content-center mt-3">{images.map((image, index) => <img key={`${image}-${index}`} src={image} alt={`${product.nombre}, imagen ${index + 1}`} className="rounded border" style={{ width: 64, height: 64, objectFit: 'cover' }} />)}</div>}
+      <div className="product-carousel">
+        <img src={images[activeImage]} className="img-fluid product-detail-image" alt={`${product.nombre}, imagen ${activeImage + 1}`} />
+        {images.length > 1 && <div className="d-flex justify-content-between px-3 pb-2">
+          <button type="button" className="btn btn-outline-secondary btn-sm" onClick={() => changeImage(-1)} aria-label="Imagen anterior">
+            <i className="bi bi-chevron-left" /> Anterior
+          </button>
+          <button type="button" className="btn btn-outline-secondary btn-sm" onClick={() => changeImage(1)} aria-label="Imagen siguiente">
+            Siguiente <i className="bi bi-chevron-right" />
+          </button>
+        </div>}
+      </div>
+      {images.length > 1 && <div className="d-flex gap-2 justify-content-center mt-3" aria-label="Seleccionar imagen del producto">
+        {images.map((image, index) => <button
+          key={`${image}-${index}`}
+          type="button"
+          className={`p-0 rounded border${index === activeImage ? ' border-primary border-2' : ''}`}
+          onClick={() => setImageSelection({ productId: id, index })}
+          aria-label={`Mostrar imagen ${index + 1}`}
+          aria-pressed={index === activeImage}
+        >
+          <img src={image} alt="" className="rounded" style={{ width: 64, height: 64, objectFit: 'cover' }} />
+        </button>)}
+      </div>}
     </div>
     <div className="col-md-6 d-flex flex-column justify-content-center">
       <span className="badge bg-secondary mb-2 align-self-start">{product.categoria}</span>
@@ -296,8 +324,19 @@ function CheckoutResultPage({ success }) {
 }
 
 const blogPosts = [
-  { slug: 'inventario', title: '5 Tips para Organizar el Inventario de tu Oficina', category: 'Consejos', date: '12 de Mayo, 2026', image: 'https://images.unsplash.com/photo-1497215728101-856f4ea42174?w=900&q=80', summary: 'Aprende a gestionar el stock de papelería e insumos para evitar pérdidas y desabastecimiento.', paragraphs: ['Mantener un inventario ordenado ayuda a evitar compras de último minuto y a detectar los productos que más utiliza tu equipo.', 'Define un lugar para cada artículo, revisa las existencias periódicamente y registra cada entrada y salida.', 'Con una planificación sencilla puedes reducir desperdicios y asegurar que nunca falten los materiales esenciales.'] },
-  { slug: 'insumos', title: 'Cómo Elegir los Insumos Correctos para tu Empresa', category: 'Gestión', date: '3 de Junio, 2026', image: 'https://images.unsplash.com/photo-1556761175-b413da4baf72?w=900&q=80', summary: 'Conoce algunos criterios para comprar materiales de oficina de forma eficiente y cuidar el presupuesto.', paragraphs: ['Antes de comprar, identifica las necesidades reales de cada área y prioriza los productos de uso frecuente.', 'Compara calidad, rendimiento y costo total. Comprar en volumen puede ser conveniente cuando existe espacio para almacenar.', 'Revisar el consumo ayuda a presupuestar mejor y a elegir proveedores que respondan a tiempo.'] },
+  { slug: 'inventario', title: '5 Tips para Organizar el Inventario de tu Oficina', category: 'Consejos', date: '12 de Mayo, 2026', image: 'https://images.unsplash.com/photo-1497215728101-856f4ea42174?w=900&q=80', summary: 'Un inventario ordenado reduce quiebres de stock, compras urgentes y pérdidas de materiales. Estas prácticas permiten mantener el control sin complejidad.', sections: [
+    ['1. Clasifica los insumos', 'Ordena los productos según su frecuencia de uso y define responsables para los artículos críticos.'],
+    ['2. Registra entradas y salidas', 'Actualiza el inventario cada vez que recibas o entregues materiales. El registro oportuno evita diferencias con el stock físico.'],
+    ['3. Define un stock mínimo', 'Establece un límite de reposición por producto para anticipar las compras antes de quedarte sin unidades.'],
+    ['4. Asigna una ubicación', 'Etiqueta estantes y zonas de almacenamiento. Un lugar fijo facilita el recuento y reduce el tiempo de búsqueda.'],
+    ['5. Realiza revisiones periódicas', 'Contrasta el inventario registrado con el físico de forma mensual para detectar diferencias a tiempo.'],
+  ] },
+  { slug: 'insumos', title: 'Cómo Elegir los Insumos Correctos para tu Empresa', category: 'Gestión', date: '3 de Junio, 2026', image: 'https://images.unsplash.com/photo-1556761175-b413da4baf72?w=900&q=80', summary: 'Una compra bien planificada ayuda a mantener el trabajo diario sin exceder el presupuesto. Para elegir los insumos adecuados es importante considerar las necesidades reales de cada equipo.', sections: [
+    ['1. Identifica las necesidades del equipo', 'Revisa qué materiales se utilizan con mayor frecuencia y separa los insumos esenciales de aquellos que pueden comprarse de manera ocasional.'],
+    ['2. Compara calidad y duración', 'El precio más bajo no siempre representa el mejor ahorro. Prefiere productos confiables que reduzcan reemplazos y compras repetidas.'],
+    ['3. Planifica las compras', 'Define fechas de revisión y cantidades aproximadas para aprovechar mejor el presupuesto y evitar compras urgentes.'],
+    ['4. Mantén proveedores confiables', 'Trabajar con proveedores estables facilita la reposición y permite mantener una calidad constante en los materiales.'],
+  ] },
 ]
 
 function BlogPage() {
@@ -321,8 +360,8 @@ function BlogDetailPage() {
   return <main className="container my-5 flex-grow-1"><article className="mx-auto" style={{ maxWidth: 850 }}>
     <Link to="/blogs" className="text-decoration-none"><i className="bi bi-arrow-left" /> Volver al blog</Link>
     <h1 className="fw-bold my-3">{post.title}</h1><p className="text-muted"><span className="badge bg-primary me-2">{post.category}</span>{post.date}</p>
-    <img src={post.image} className="img-fluid rounded shadow-sm w-100 mb-4" alt={post.title} />
-    <p className="lead">{post.summary}</p>{post.paragraphs.map(paragraph => <p key={paragraph}>{paragraph}</p>)}
+    <img src={post.image} className="img-fluid rounded shadow-sm w-100 mb-4" alt={post.category === 'Consejos' ? 'Oficina organizada con insumos y papelería' : 'Equipo revisando la gestión de una oficina'} />
+    <p>{post.summary}</p>{post.sections.map(([heading, paragraph]) => <section key={heading}><h2 className="h4 mt-4">{heading}</h2><p>{paragraph}</p></section>)}
   </article></main>
 }
 
@@ -348,27 +387,45 @@ function AboutPage() {
 function ContactPage() {
   const { setMessages, activeUser, apiEnabled, apiRequest, setApiError } = useStore()
   const [notice, setNotice] = useState('')
+  const [noticeType, setNoticeType] = useState('success')
+  const [preparedEmailUrl, setPreparedEmailUrl] = useState('')
   const submit = async event => {
     event.preventDefault()
     const form = new FormData(event.currentTarget)
     const request = {
-      nombre: form.get('nombre'), email: form.get('email'),
-      asunto: form.get('asunto'), mensaje: form.get('mensaje'),
+      nombre: String(form.get('nombre')).trim(),
+      email: String(form.get('email')).trim().toLowerCase(),
+      asunto: String(form.get('asunto')).trim(),
+      mensaje: String(form.get('mensaje')).trim(),
     }
+    const cuerpo = [`Nombre: ${request.nombre}`, `Correo: ${request.email}`, '', request.mensaje].join('\n')
+    const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent('contacto@prostock.cl')}&su=${encodeURIComponent(request.asunto)}&body=${encodeURIComponent(cuerpo)}`
+    const gmailWindow = window.open('about:blank', '_blank')
+    if (gmailWindow) gmailWindow.opener = null
     try {
       const message = apiEnabled
         ? await apiRequest('/api/messages', { method: 'POST', body: JSON.stringify(request) })
         : { ...request, id: createId(), fecha: formatToday(), atendido: false }
       setMessages(current => [...current, message])
-      event.currentTarget.reset()
-      setNotice('Tu mensaje fue enviado correctamente.')
+      form.reset()
+      if (gmailWindow) gmailWindow.location.href = gmailUrl
+      setNoticeType('success')
+      setPreparedEmailUrl(gmailWindow ? '' : gmailUrl)
+      setNotice(apiEnabled
+        ? `El mensaje quedó registrado en el sistema. ${gmailWindow ? 'Gmail se abrió con el correo preparado; debes enviarlo desde allí.' : 'No se pudo abrir Gmail automáticamente.'}`
+        : `El mensaje quedó guardado localmente. ${gmailWindow ? 'Gmail se abrió con el correo preparado; debes enviarlo desde allí.' : 'No se pudo abrir Gmail automáticamente.'}`)
       setApiError('')
     } catch (error) {
+      gmailWindow?.close()
+      setPreparedEmailUrl('')
+      setNoticeType('danger')
       setNotice(`No se pudo enviar el mensaje: ${error.message}`)
     }
   }
   return <main className="container my-5"><h1 className="h2 mb-4 text-center">Formulario de Contacto</h1>
-    {notice && <div className="alert alert-success" role="status">{notice}</div>}
+    {notice && <div className={`alert alert-${noticeType}`} role={noticeType === 'danger' ? 'alert' : 'status'}>
+      {notice}{preparedEmailUrl && <> Puedes <a href={preparedEmailUrl} target="_blank" rel="noreferrer">abrir el correo preparado</a>.</>}
+    </div>}
     <div className="row g-4"><div className="col-md-7"><div className="card shadow-sm border-0 p-4">
       <form onSubmit={submit}>{[['nombre', 'Nombre Completo', 'text', activeUser?.nombre || 'Ej: Ana López'], ['email', 'Correo Electrónico', 'email', activeUser?.email || 'correo@ejemplo.com'], ['asunto', 'Asunto', 'text', 'Consulta sobre cotización / stock']].map(([name, label, type, placeholder]) => <div className="mb-3" key={name}><label className="form-label" htmlFor={`contact-${name}`}>{label}</label><input id={`contact-${name}`} name={name} type={type} className="form-control" required defaultValue={name === 'nombre' || name === 'email' ? placeholder : undefined} placeholder={name === 'asunto' ? placeholder : undefined} /></div>)}
         <div className="mb-3"><label className="form-label" htmlFor="contact-mensaje">Mensaje</label><textarea id="contact-mensaje" name="mensaje" className="form-control" rows="4" required placeholder="Escribe tu mensaje aquí..." /></div>
@@ -386,6 +443,7 @@ function ContactPage() {
 function LoginPage() {
   const { users, setActiveUser, apiEnabled, apiRequest, refreshBackend, setApiError } = useStore()
   const navigate = useNavigate()
+  const location = useLocation()
   const [error, setError] = useState('')
   const submit = async event => {
     event.preventDefault()
@@ -418,9 +476,10 @@ function LoginPage() {
         setApiError(`No se pudieron cargar los datos del usuario: ${requestError.message}`)
       }
     }
-    navigate(user.rol === 'ADMIN' ? '/admin' : '/perfil')
+    navigate(user.rol === 'ADMIN' ? '/admin' : '/')
   }
   return <AuthLayout title="Iniciar Sesión">
+    {location.state?.notice && <div className="alert alert-success" role="status">{location.state.notice}</div>}
     {error && <div className="alert alert-danger" role="alert">{error}</div>}
     <form onSubmit={submit}><div className="mb-3"><label className="form-label" htmlFor="login-email">Correo Electrónico</label><input id="login-email" name="email" type="email" className="form-control" required placeholder="correo@duoc.cl" /></div>
       <div className="mb-3"><label className="form-label" htmlFor="login-password">Contraseña</label><input id="login-password" name="password" type="password" className="form-control" required /></div>
@@ -437,7 +496,7 @@ function AuthLayout({ title, children }) {
 }
 
 function RegisterPage() {
-  const { users, setUsers, setActiveUser, apiEnabled, apiRequest, refreshBackend, setApiError } = useStore()
+  const { users, setUsers, apiEnabled, apiRequest } = useStore()
   const [error, setError] = useState('')
   const [region, setRegion] = useState('')
   const navigate = useNavigate()
@@ -464,29 +523,17 @@ function RegisterPage() {
       comuna: String(form.get('comuna')).trim(), direccion: String(form.get('direccion')).trim(),
       password, rol: 'CLIENTE',
     }
-    let user
     if (apiEnabled) {
       try {
-        const auth = await apiRequest('/api/auth/register', { method: 'POST', body: JSON.stringify(registration) })
-        localStorage.setItem('prostock_access_token', auth.token)
-        user = auth.user
+        await apiRequest('/api/auth/register', { method: 'POST', body: JSON.stringify(registration) })
       } catch (requestError) {
         setError(requestError.message)
         return
       }
     } else {
-      user = { ...registration, id: createId() }
-      setUsers([...users, user])
+      setUsers([...users, { ...registration, id: createId() }])
     }
-    setActiveUser(user)
-    if (apiEnabled) {
-      try {
-        await refreshBackend(user)
-      } catch (requestError) {
-        setApiError(`No se pudieron cargar los datos de la cuenta: ${requestError.message}`)
-      }
-    }
-    navigate('/perfil')
+    navigate('/login', { state: { notice: '¡Cuenta creada con éxito! Inicia sesión para continuar.' } })
   }
   return <AuthLayout title="Crear una Cuenta">
     {error && <div className="alert alert-danger" role="alert">{error}</div>}
@@ -623,7 +670,13 @@ function AdminProductForm() {
     <form onSubmit={submit}>
       <Field name="codigo" label="Código" defaultValue={product?.codigo} />
       <Field name="nombre" label="Nombre" defaultValue={product?.nombre} />
-      <Field name="categoria" label="Categoría" defaultValue={product?.categoria} />
+      <div className="mb-3"><label className="form-label" htmlFor="product-category">Categoría</label><select id="product-category" name="categoria" className="form-select" required defaultValue={product?.categoria || ''}>
+        <option value="">Seleccione...</option>
+        <option value="Papelería y Oficina">Papelería y Oficina</option>
+        <option value="Escolar">Escolar</option>
+        <option value="Aseo y Limpieza">Aseo y Limpieza</option>
+        <option value="Insumos">Insumos</option>
+      </select></div>
       <div className="row"><div className="col-md-6"><Field name="precio" label="Precio neto" type="number" min="1" defaultValue={product?.precio} /></div><div className="col-md-6"><Field name="stock" label="Stock" type="number" min="0" defaultValue={product?.stock} /></div></div>
       <div className="mb-3"><label className="form-label" htmlFor="product-images">Imágenes (una URL por línea)</label><textarea className="form-control" id="product-images" name="imagenes" required rows="3" defaultValue={product?.imagenes?.join('\n') || product?.imagen || ''} /></div>
       <div className="d-flex justify-content-between"><Link to="/admin/productos" className="btn btn-outline-secondary">Cancelar</Link><button className="btn btn-success">Guardar Producto</button></div>
@@ -773,7 +826,7 @@ function LegacyPathRedirects() {
     '/blogs.html': '/blogs', '/contacto.html': '/contacto', '/login.html': '/login',
     '/registro.html': '/registro', '/perfil.html': '/perfil',
     '/detalle-producto.html': `/producto/${new URLSearchParams(location.search).get('id') || ''}`,
-    '/detalle-blog.html': '/blogs/inventario', '/detalle-blog-2.html': '/blogs/insumos',
+    '/detalle-blog.html': '/blogs/insumos', '/detalle-blog-2.html': '/blogs/inventario',
     '/admin/index.html': '/admin', '/admin/productos-listar.html': '/admin/productos',
     '/admin/producto-form.html': `/admin/productos/${new URLSearchParams(location.search).get('id') || 'nuevo'}`,
     '/admin/usuarios-listar.html': '/admin/usuarios',
