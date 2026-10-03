@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import productsSeed from '../../data/productos.json'
 import { apiEnabled, apiRequest } from '../api.js'
 import { readProducts } from '../data/productRepository.js'
 import { listCatalogProducts } from '../services/catalogApi.js'
@@ -28,7 +27,7 @@ function useStoredValue(key, fallback, persist, initialize = () => readStored(ke
 }
 
 export default function StoreProvider({ children }) {
-  const [products, setProducts] = useStoredValue('productos_db', apiEnabled ? [] : readProducts(productsSeed), !apiEnabled)
+  const [products, setProducts] = useStoredValue('productos_db', apiEnabled ? [] : readProducts(), !apiEnabled)
   const [cart, setCart] = useStoredValue('carrito', [], true)
   const [users, setUsers] = useStoredValue('usuarios_db', apiEnabled ? [] : [
     { id: 999, nombre: 'Administrador Prostock', email: 'admin@duoc.cl', password: 'admin123', rol: 'ADMIN' },
@@ -40,7 +39,6 @@ export default function StoreProvider({ children }) {
     return readStored('usuarioActivo', null, true)
   })
   const [apiError, setApiError] = useState('')
-  const [backendReady, setBackendReady] = useState(!apiEnabled)
 
   const refreshBackend = useCallback(async (user = activeUser) => {
     const remoteProducts = await listCatalogProducts()
@@ -77,9 +75,6 @@ export default function StoreProvider({ children }) {
         console.error('No fue posible cargar datos desde los microservicios.', error)
         if (active) setApiError(`No fue posible conectar con el backend: ${error.message}`)
       })
-      .finally(() => {
-        if (active) setBackendReady(true)
-      })
     return () => { active = false }
   }, [activeUser, refreshBackend, setProducts])
 
@@ -97,8 +92,8 @@ export default function StoreProvider({ children }) {
   const value = useMemo(() => ({
     products, setProducts, cart, setCart, users, setUsers, orders, setOrders,
     messages, setMessages, activeUser, setActiveUser, apiEnabled, apiError,
-    setApiError, backendReady, refreshBackend,
-  }), [products, setProducts, cart, setCart, users, setUsers, orders, setOrders, messages, setMessages, activeUser, setActiveUser, apiError, setApiError, backendReady, refreshBackend])
+    setApiError, refreshBackend,
+  }), [products, setProducts, cart, setCart, users, setUsers, orders, setOrders, messages, setMessages, activeUser, setActiveUser, apiError, setApiError, refreshBackend])
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>
 }

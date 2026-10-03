@@ -1,9 +1,7 @@
 import { Link } from 'react-router-dom'
 import { addProductToCart } from '../data/cart.js'
 import { useStore } from '../store/StoreContext.jsx'
-
-const money = value => `$${Number(value || 0).toLocaleString('es-CL')}`
-const withTax = value => Math.round(Number(value) * 1.19)
+import { money, withTax } from '../utils/storeFormatters.js'
 
 export default function ProductCard({ product }) {
   const { cart, setCart } = useStore()
