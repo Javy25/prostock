@@ -577,13 +577,119 @@ function ProfilePage() {
   </main>
 }
 
+function OrderDetails({ order, customer }) {
+  const shipping = order.despacho
+  const shippingAddress = shipping
+    ? [shipping.direccion, shipping.comuna, shipping.region].filter(Boolean).join(', ')
+    : ''
+  const orderDate = order.fecha || (order.createdAt
+    ? new Date(order.createdAt).toLocaleString('es-CL')
+    : 'No disponible')
+
+  return <>
+    <div className="card border-0 shadow-sm mb-4"><div className="card-body">
+      <h2 className="h5">Información del pedido</h2>
+      <dl className="row mb-0">
+        <div className="col-md-6 mb-2"><dt>Cliente</dt><dd>{customer?.nombre || `Usuario #${order.usuarioId}`}</dd></div>
+        {customer?.email && <div className="col-md-6 mb-2"><dt>Correo electrónico</dt><dd>{customer.email}</dd></div>}
+        <div className="col-md-6 mb-2"><dt>Fecha</dt><dd>{orderDate}</dd></div>
+        <div className="col-md-6 mb-2"><dt>Estado</dt><dd><span className="badge bg-success">{order.estado || 'No disponible'}</span></dd></div>
+      </dl>
+    </div></div>
+
+    <div className="card border-0 shadow-sm mb-4"><div className="table-responsive">
+      <table className="table table-hover align-middle mb-0">
+        <thead className="table-light"><tr><th>Producto</th><th>Cantidad</th><th>Precio neto unitario</th><th>Precio con IVA</th><th>Total línea</th></tr></thead>
+        <tbody>
+          {(order.items || []).map((item, index) => {
+            const grossPrice = Number(item.precioConIva ?? withTax(item.precio))
+            const lineTotal = Number(item.totalLinea ?? grossPrice * item.cantidad)
+            return <tr key={item.id || `${item.productoId || item.codigo || item.nombre}-${index}`}>
+              <td>{item.nombre}{item.codigo && <div className="small text-muted">{item.codigo}</div>}</td>
+              <td>{item.cantidad}</td>
+              <td>{money(item.precio)}</td>
+              <td>{money(grossPrice)}</td>
+              <td>{money(lineTotal)}</td>
+            </tr>
+          })}
+          {!order.items?.length && <tr><td colSpan="5" className="text-center text-muted py-4">Este pedido no contiene productos.</td></tr>}
+        </tbody>
+      </table>
+    </div></div>
+
+    {shipping && <div className="card border-0 shadow-sm mb-4"><div className="card-body">
+      <h2 className="h5">Datos de despacho</h2>
+      <dl className="row mb-0">
+        {shipping.nombre && <div className="col-md-6 mb-2"><dt>Nombre</dt><dd>{shipping.nombre}</dd></div>}
+        {shipping.telefono && <div className="col-md-6 mb-2"><dt>Teléfono</dt><dd>{shipping.telefono}</dd></div>}
+        {shippingAddress && <div className="col-12 mb-2"><dt>Dirección</dt><dd>{shippingAddress}</dd></div>}
+        {shipping.observaciones && <div className="col-12 mb-2"><dt>Observaciones</dt><dd>{shipping.observaciones}</dd></div>}
+      </dl>
+    </div></div>}
+
+    <div className="card border-0 shadow-sm"><div className="card-body ms-auto" style={{ maxWidth: 360, width: '100%' }}>
+      <div className="d-flex justify-content-between mb-2"><span>Subtotal</span><strong>{money(order.subtotal)}</strong></div>
+      <div className="d-flex justify-content-between mb-2"><span>IVA</span><strong>{money(order.iva)}</strong></div>
+      <hr />
+      <div className="d-flex justify-content-between fs-5"><span>Total</span><strong>{money(order.total)}</strong></div>
+    </div></div>
+  </>
+}
+
 function AdminLayout() {
   const { activeUser } = useStore()
   const location = useLocation()
   if (activeUser?.rol !== 'ADMIN') return <main className="container my-5 text-center"><h1 className="h3">Acceso restringido a administradores.</h1><Link className="btn btn-primary mt-3" to="/login">Iniciar sesión como administrador</Link></main>
-  const links = [['/admin', 'Dashboard'], ['/admin/productos', 'Productos'], ['/admin/usuarios', 'Usuarios'], ['/admin/mensajes', 'Mensajes']]
+  const links = [['/admin', 'Dashboard'], ['/admin/pedidos', 'Órdenes y Boletas'], ['/admin/productos', 'Productos'], ['/admin/usuarios', 'Usuarios'], ['/admin/mensajes', 'Mensajes']]
   return <><nav className="navbar navbar-expand navbar-dark bg-dark"><div className="container-fluid"><Link className="navbar-brand" to="/admin"><img src="/img/logo-prostock.svg" className="brand-logo" alt="Prostock" /> <span className="admin-label">ADMIN</span></Link><Link to="/" className="btn btn-outline-light btn-sm">Volver a la Tienda</Link></div></nav><BackendNotice />
     <div className="container-fluid my-4"><div className="row"><aside className="col-md-3 col-lg-2 mb-3"><div className="list-group shadow-sm">{links.map(([to, label]) => <NavLink key={to} to={to} end={to === '/admin'} className={({ isActive }) => `list-group-item list-group-item-action${isActive || (to !== '/admin' && location.pathname.startsWith(to)) ? ' active' : ''}`}>{label}</NavLink>)}</div></aside><section className="col-md-9 col-lg-10"><Outlet /></section></div></div>
+  </>
+}
+
+function AdminOrdersPage() {
+  const { orders, users } = useStore()
+  const sortedOrders = [...orders].sort((a, b) => {
+    const dateA = new Date(a.createdAt || a.fecha || 0).getTime()
+    const dateB = new Date(b.createdAt || b.fecha || 0).getTime()
+    return (Number.isNaN(dateB) ? 0 : dateB) - (Number.isNaN(dateA) ? 0 : dateA)
+  })
+
+  return <>
+    <h1 className="h3 mb-3">Órdenes y Boletas</h1>
+    <div className="card border-0 shadow-sm"><div className="table-responsive">
+      <table className="table table-hover align-middle mb-0">
+        <thead className="table-dark"><tr><th>Pedido</th><th>Cliente</th><th>Fecha</th><th>Estado</th><th>Total</th><th>Detalle</th></tr></thead>
+        <tbody>
+          {sortedOrders.map(order => {
+            const customer = users.find(user => String(user.id) === String(order.usuarioId))
+            return <tr key={order.id}>
+              <td>#{order.id}</td>
+              <td>{customer?.nombre || `Usuario #${order.usuarioId}`}</td>
+              <td>{order.fecha || (order.createdAt ? new Date(order.createdAt).toLocaleDateString('es-CL') : 'No disponible')}</td>
+              <td><span className="badge bg-success">{order.estado || 'No disponible'}</span></td>
+              <td>{money(order.total)}</td>
+              <td><Link className="btn btn-sm btn-outline-primary" to={`/admin/pedidos/${order.id}`}>Ver pedido</Link></td>
+            </tr>
+          })}
+          {!sortedOrders.length && <tr><td colSpan="6" className="text-center text-muted py-4">No hay pedidos registrados.</td></tr>}
+        </tbody>
+      </table>
+    </div></div>
+  </>
+}
+
+function AdminOrderDetailPage() {
+  const { id } = useParams()
+  const { orders, users } = useStore()
+  const order = orders.find(item => String(item.id) === id)
+  if (!order) return <><h1 className="h3">Pedido no encontrado.</h1><Link to="/admin/pedidos">Volver a órdenes y boletas</Link></>
+  const customer = users.find(user => String(user.id) === String(order.usuarioId))
+  return <>
+    <div className="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+      <div><h1 className="h3 mb-1">Detalle del pedido #{order.id}</h1><p className="text-muted mb-0">Resumen del pedido con los datos disponibles.</p></div>
+      <Link to="/admin/pedidos" className="btn btn-outline-secondary">Volver a órdenes</Link>
+    </div>
+    <OrderDetails order={order} customer={customer} />
   </>
 }
 
@@ -701,8 +807,41 @@ function AdminUsersPage() {
   }
   return <><div className="d-flex justify-content-between align-items-center mb-3"><h1 className="h3">Gestión de Usuarios</h1><Link to="/admin/usuarios/nuevo" className="btn btn-primary">+ Nuevo Usuario</Link></div>
     <div className="card border-0 shadow-sm"><div className="table-responsive"><table className="table table-hover align-middle mb-0"><thead className="table-dark"><tr><th>Nombre</th><th>Correo</th><th>Rol</th><th>Acciones</th></tr></thead><tbody>
-      {users.map(user => <tr key={user.id}><td>{user.nombre}</td><td>{user.email}</td><td><span className={`badge ${user.rol === 'ADMIN' ? 'bg-danger' : 'bg-secondary'}`}>{user.rol}</span></td><td><Link to={`/admin/usuarios/${user.id}`} className="btn btn-sm btn-warning me-1" aria-label={`Editar ${user.nombre}`}><i className="bi bi-pencil" /></Link><button className="btn btn-sm btn-danger" onClick={() => remove(user.id)} aria-label={`Eliminar ${user.nombre}`}><i className="bi bi-trash" /></button></td></tr>)}
+      {users.map(user => <tr key={user.id}><td>{user.nombre}</td><td>{user.email}</td><td><span className={`badge ${user.rol === 'ADMIN' ? 'bg-danger' : 'bg-secondary'}`}>{user.rol}</span></td><td className="text-nowrap"><Link to={`/admin/usuarios/${user.id}/compras`} className="btn btn-sm btn-outline-primary me-1">Compras</Link><Link to={`/admin/usuarios/${user.id}`} className="btn btn-sm btn-warning me-1" aria-label={`Editar ${user.nombre}`}><i className="bi bi-pencil" /></Link><button className="btn btn-sm btn-danger" onClick={() => remove(user.id)} aria-label={`Eliminar ${user.nombre}`}><i className="bi bi-trash" /></button></td></tr>)}
     </tbody></table></div></div>
+  </>
+}
+
+function AdminUserPurchaseHistory() {
+  const { id } = useParams()
+  const { users, orders } = useStore()
+  const user = users.find(item => String(item.id) === id)
+  if (!user) return <><h1 className="h3">Usuario no encontrado.</h1><Link to="/admin/usuarios">Volver a usuarios</Link></>
+  const userOrders = orders
+    .filter(order => String(order.usuarioId) === String(user.id))
+    .sort((a, b) => new Date(b.createdAt || b.fecha || 0).getTime() - new Date(a.createdAt || a.fecha || 0).getTime())
+
+  return <>
+    <div className="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+      <div><h1 className="h3 mb-1">Historial de compras</h1><p className="text-muted mb-0">{user.nombre} · {user.email}</p></div>
+      <Link to="/admin/usuarios" className="btn btn-outline-secondary">Volver a usuarios</Link>
+    </div>
+    <div className="card border-0 shadow-sm"><div className="table-responsive">
+      <table className="table table-hover align-middle mb-0">
+        <thead className="table-dark"><tr><th>Pedido</th><th>Fecha</th><th>Estado</th><th>Productos</th><th>Total</th><th>Detalle</th></tr></thead>
+        <tbody>
+          {userOrders.map(order => <tr key={order.id}>
+            <td>#{order.id}</td>
+            <td>{order.fecha || (order.createdAt ? new Date(order.createdAt).toLocaleDateString('es-CL') : 'No disponible')}</td>
+            <td><span className="badge bg-success">{order.estado || 'No disponible'}</span></td>
+            <td>{order.items?.length || 0}</td>
+            <td>{money(order.total)}</td>
+            <td><Link className="btn btn-sm btn-outline-primary" to={`/admin/pedidos/${order.id}`}>Ver pedido</Link></td>
+          </tr>)}
+          {!userOrders.length && <tr><td colSpan="6" className="text-center text-muted py-4">Este usuario no tiene compras registradas.</td></tr>}
+        </tbody>
+      </table>
+    </div></div>
   </>
 }
 
@@ -858,11 +997,14 @@ export default function App() {
     <Route path="registro" element={<RegisterPage />} />
     <Route path="admin" element={<AdminLayout />}>
       <Route index element={<AdminDashboard />} />
+      <Route path="pedidos" element={<AdminOrdersPage />} />
+      <Route path="pedidos/:id" element={<AdminOrderDetailPage />} />
       <Route path="productos" element={<AdminProductsPage />} />
       <Route path="productos/nuevo" element={<AdminProductForm />} />
       <Route path="productos/:id" element={<AdminProductForm />} />
       <Route path="usuarios" element={<AdminUsersPage />} />
       <Route path="usuarios/nuevo" element={<AdminUserForm />} />
+      <Route path="usuarios/:id/compras" element={<AdminUserPurchaseHistory />} />
       <Route path="usuarios/:id" element={<AdminUserForm />} />
       <Route path="mensajes" element={<AdminMessagesPage />} />
     </Route>
