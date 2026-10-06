@@ -35,7 +35,7 @@ function routeToReact(request, response, next) {
     return
   }
 
-  const isReactRoute = /^\/(productos|carrito|nosotros|blogs|contacto|login|registro|perfil|producto|admin)(\/|$)/.test(url.pathname)
+  const isReactRoute = /^\/(productos|carrito|compra|pedidos|categorias|ofertas|nosotros|blogs|contacto|login|registro|perfil|producto|admin)(\/|$)/.test(url.pathname)
   if (!isReactRoute) return next()
 
   request.url = `/index.html${url.search}`

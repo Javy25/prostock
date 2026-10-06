@@ -15,7 +15,20 @@ npm run dev
 ```
 
 The Vite starter page has been replaced with React routes for the store,
-accounts, shopping cart, and administration panel.
+categories, offers, checkout results, order history, accounts, and the
+administration panel. The default demo uses JavaScript CRUD repositories backed
+by `localStorage`.
+
+Run the Jasmine/Karma tests and production build with:
+
+```sh
+npm test
+npm run build
+```
+
+The updated requirements specification is in [docs/ERS-V2.md](./docs/ERS-V2.md),
+and the test cases and current coverage limitations are in
+[docs/cobertura-pruebas.md](./docs/cobertura-pruebas.md).
 
 ## Spring Boot microservices
 

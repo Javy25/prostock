@@ -11,9 +11,9 @@ import {
   useNavigate,
   useParams,
 } from 'react-router-dom'
-import productsSeed from '../data/productos.json'
 import regions from '../data/regiones.json'
 import { apiEnabled, apiRequest } from './api.js'
+import { mockDatabase } from './data/mockDatabase.js'
 
 const StoreContext = createContext(null)
 const money = value => `$${Number(value || 0).toLocaleString('es-CL')}`
@@ -22,80 +22,83 @@ const createId = () => Date.now()
 const formatToday = () => new Date().toLocaleDateString('es-CL')
 const pageTitles = {
   '/': 'Inicio', '/productos': 'Catálogo de Productos', '/carrito': 'Carrito de Compras',
+  '/categorias': 'Categorías', '/ofertas': 'Ofertas', '/compra/resultado': 'Resultado de compra',
   '/nosotros': 'Nosotros', '/blogs': 'Blog y Noticias', '/contacto': 'Contacto',
   '/login': 'Iniciar Sesión', '/registro': 'Crear una Cuenta', '/perfil': 'Mi Perfil',
 }
-const readStored = (key, fallback) => {
-  const stored = localStorage.getItem(key)
-  if (stored === null) {
-    localStorage.setItem(key, JSON.stringify(fallback))
-    return fallback
-  }
-  return JSON.parse(stored)
-}
-
-function useStoredValue(key, fallback) {
-  const [value, setValue] = useState(() => readStored(key, fallback))
+function useStoredValue(repository) {
+  const [value, setValue] = useState(() => repository.list())
   const update = useCallback(nextValue => {
     setValue(current => {
       const resolved = typeof nextValue === 'function' ? nextValue(current) : nextValue
-      localStorage.setItem(key, JSON.stringify(resolved))
-      return resolved
+      return repository.replace(resolved)
     })
-  }, [key])
+  }, [repository])
   return [value, update]
 }
 
 function StoreProvider({ children }) {
-  const [products, setProducts] = useStoredValue('productos_db', productsSeed)
-  const [cart, setCart] = useStoredValue('carrito', [])
-  const [users, setUsers] = useStoredValue('usuarios_db', [
-    { id: 999, nombre: 'Administrador Prostock', email: 'admin@duoc.cl', password: 'admin123', rol: 'ADMIN' },
-  ])
-  const [orders, setOrders] = useStoredValue('pedidos_db', [])
-  const [messages, setMessages] = useStoredValue('mensajes_contacto_db', [])
-  const [activeUser, setActiveUser] = useStoredValue('usuarioActivo', null)
+  const [products, setProducts] = useStoredValue(mockDatabase.products)
+  const [cart, setCart] = useStoredValue(mockDatabase.cart)
+  const [categories, setCategories] = useStoredValue(mockDatabase.categories)
+  const [offers, setOffers] = useStoredValue(mockDatabase.offers)
+  const [users, setUsers] = useStoredValue(mockDatabase.users)
+  const [orders, setOrders] = useStoredValue(mockDatabase.orders)
+  const [messages, setMessages] = useStoredValue(mockDatabase.messages)
+  const [activeUser, setActiveUserState] = useState(() => {
+    if (apiEnabled && !localStorage.getItem('prostock_access_token')) return null
+    const stored = localStorage.getItem('usuarioActivo')
+    return stored === null ? null : JSON.parse(stored)
+  })
+  const setActiveUser = useCallback(nextValue => {
+    setActiveUserState(current => {
+      const resolved = typeof nextValue === 'function' ? nextValue(current) : nextValue
+      if (resolved === null) localStorage.removeItem('usuarioActivo')
+      else localStorage.setItem('usuarioActivo', JSON.stringify(resolved))
+      return resolved
+    })
+  }, [])
   const [apiError, setApiError] = useState('')
   const [backendReady, setBackendReady] = useState(!apiEnabled)
 
-  const refreshBackend = useCallback(async (user = activeUser) => {
+  const refreshBackend = useCallback(async user => {
     const remoteProducts = await apiRequest('/api/products')
     setProducts(remoteProducts)
     if (!user) return
     const [remoteUsers, remoteOrders, remoteMessages] = await Promise.all([
-      user.rol === 'ADMIN' ? apiRequest('/api/users') : Promise.resolve(users),
+      user.rol === 'ADMIN' ? apiRequest('/api/users') : Promise.resolve(null),
       apiRequest(user.rol === 'ADMIN' ? '/api/orders' : `/api/orders?usuarioId=${user.id}`),
-      user.rol === 'ADMIN' ? apiRequest('/api/messages') : Promise.resolve(messages),
+      user.rol === 'ADMIN' ? apiRequest('/api/messages') : Promise.resolve(null),
     ])
-    if (user.rol === 'ADMIN') setUsers(remoteUsers)
+    if (user.rol === 'ADMIN') {
+      setUsers(remoteUsers)
+      setMessages(remoteMessages.map(message => ({
+        ...message,
+        fecha: message.fecha ? new Date(message.fecha).toLocaleDateString('es-CL') : '',
+      })))
+    }
     setOrders(remoteOrders.map(order => ({
       ...order,
       fecha: order.createdAt ? new Date(order.createdAt).toLocaleDateString('es-CL') : '',
     })))
-    if (user.rol === 'ADMIN') setMessages(remoteMessages.map(message => ({
-      ...message,
-      fecha: message.fecha ? new Date(message.fecha).toLocaleDateString('es-CL') : '',
-    })))
     setApiError('')
-  }, [activeUser, users, messages, setProducts, setUsers, setOrders, setMessages])
+  }, [setProducts, setUsers, setOrders, setMessages, setApiError])
 
   useEffect(() => {
     if (!apiEnabled) return
-    if (!localStorage.getItem('prostock_access_token')) setActiveUser(null)
+    const token = localStorage.getItem('prostock_access_token')
+    const storedUser = token ? localStorage.getItem('usuarioActivo') : null
+    const sessionUser = storedUser ? JSON.parse(storedUser) : null
     let active = true
-    apiRequest('/api/products')
-      .then(remoteProducts => {
-        if (active) setProducts(remoteProducts)
-      })
+    refreshBackend(sessionUser)
       .catch(error => {
-        console.error('No fue posible cargar datos desde los microservicios.', error)
         if (active) setApiError(`No fue posible conectar con el backend: ${error.message}`)
       })
       .finally(() => {
         if (active) setBackendReady(true)
       })
     return () => { active = false }
-  }, [setActiveUser, setProducts])
+  }, [refreshBackend, setApiError])
 
   useEffect(() => {
     if (!apiEnabled && !users.some(user => user.email === 'admin@duoc.cl')) {
@@ -109,9 +112,10 @@ function StoreProvider({ children }) {
   }, [users, setUsers])
   const value = useMemo(() => ({
     products, setProducts, cart, setCart, users, setUsers, orders, setOrders,
+    categories, setCategories, offers, setOffers,
     messages, setMessages, activeUser, setActiveUser, apiEnabled, apiError,
     setApiError, backendReady, refreshBackend,
-  }), [products, setProducts, cart, setCart, users, setUsers, orders, setOrders, messages, setMessages, activeUser, setActiveUser, apiError, setApiError, backendReady, refreshBackend])
+  }), [products, setProducts, cart, setCart, categories, setCategories, offers, setOffers, users, setUsers, orders, setOrders, messages, setMessages, activeUser, setActiveUser, apiError, setApiError, backendReady, refreshBackend])
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>
 }
@@ -128,6 +132,8 @@ function Header() {
   const links = [
     ['/', 'Inicio'],
     ['/productos', 'Productos'],
+    ['/categorias', 'Categorías'],
+    ['/ofertas', 'Ofertas'],
     ['/nosotros', 'Nosotros'],
     ['/blogs', 'Blog'],
     ['/contacto', 'Contacto'],
@@ -186,13 +192,17 @@ function SiteLayout() {
 }
 
 function BackendNotice() {
-  const { apiError, apiEnabled } = useStore()
-  if (!apiEnabled || !apiError) return null
-  return <div className="container mt-3"><div className="alert alert-danger mb-0" role="alert">{apiError}</div></div>
+  const { apiError, apiEnabled, backendReady } = useStore()
+  if (!apiEnabled) return null
+  if (!backendReady) return <div className="container mt-3"><div className="alert alert-info mb-0" role="status">Conectando con el catálogo de Prostock...</div></div>
+  if (apiError) return <div className="container mt-3"><div className="alert alert-danger mb-0" role="alert">{apiError}</div></div>
+  return null
 }
 
 function ProductCard({ product }) {
-  const { cart, setCart } = useStore()
+  const { cart, setCart, offers, apiEnabled, backendReady, apiError } = useStore()
+  const offer = !apiEnabled && offers.find(item => item.active && item.categoria === product.categoria)
+  const price = offer ? Math.round(product.precio * (1 - offer.descuento / 100)) : product.precio
   const addToCart = () => {
     const found = cart.find(item => item.id === product.id)
     if (found && found.cantidad >= product.stock) {
@@ -203,7 +213,7 @@ function ProductCard({ product }) {
       const item = current.find(entry => entry.id === product.id)
       return item
         ? current.map(entry => entry.id === product.id ? { ...entry, cantidad: entry.cantidad + 1 } : entry)
-        : [...current, { ...product, cantidad: 1 }]
+        : [...current, { ...product, precio: price, precioOriginal: product.precio, oferta: offer?.titulo, cantidad: 1 }]
     })
   }
 
@@ -217,8 +227,9 @@ function ProductCard({ product }) {
           <small className="text-muted fw-bold">CÓD: {product.codigo}</small>
           <h2 className="h6 fw-bold mt-2"><Link className="text-decoration-none text-dark" to={`/producto/${product.id}`}>{product.nombre}</Link></h2>
           <span className="text-muted small">{product.categoria}</span>
-          <strong className="text-primary mt-2">{money(withTax(product.precio))} IVA incl.</strong>
-          <button className="btn btn-primary mt-auto mt-3" onClick={addToCart} disabled={product.stock <= 0}>
+          {offer && <span className="badge bg-danger align-self-start mt-2">{offer.descuento}% dcto. · {offer.titulo}</span>}
+          <strong className="text-primary mt-2">{money(withTax(price))} IVA incl.</strong>
+          <button className="btn btn-primary mt-auto mt-3" onClick={addToCart} disabled={product.stock <= 0 || (apiEnabled && (!backendReady || Boolean(apiError)))}>
             <i className="bi bi-cart-plus me-1" />Agregar al carrito
           </button>
         </div>
@@ -295,13 +306,55 @@ function ProductsPage() {
   )
 }
 
+function CategoriesPage() {
+  const { products, categories: categoryRecords, apiEnabled } = useStore()
+  const categories = (apiEnabled
+    ? [...new Set(products.map(product => product.categoria))]
+    : categoryRecords.map(item => item.nombre)).sort()
+  return <main className="container my-5"><header className="text-center mb-4"><h1 className="display-5 fw-bold">Categorías</h1><p className="text-muted">Explora nuestros productos por categoría.</p></header>
+    <div className="row g-3">{categories.map(category => {
+      const count = products.filter(product => product.categoria === category).length
+      return <div className="col-sm-6 col-lg-3" key={category}><Link to={`/categorias/${encodeURIComponent(category)}`} className="home-category-card rounded h-100">
+        <span className="home-category-icon"><i className="bi bi-grid" /></span><span><strong>{category}</strong><small>{count} productos</small></span><i className="bi bi-arrow-right" />
+      </Link></div>
+    })}</div>
+  </main>
+}
+
+function CategoryDetailPage() {
+  const { category } = useParams()
+  const { products } = useStore()
+  const decodedCategory = decodeURIComponent(category)
+  const filtered = products.filter(product => product.categoria.toLowerCase() === decodedCategory.toLowerCase())
+  return <main className="container my-5"><div className="d-flex justify-content-between align-items-center mb-4"><div><Link to="/categorias" className="text-decoration-none"><i className="bi bi-arrow-left" /> Categorías</Link><h1 className="h2 mt-2">{decodedCategory}</h1></div></div>
+    <div className="row">{filtered.length ? filtered.map(product => <ProductCard key={product.id} product={product} />) : <p className="text-muted">No hay productos en esta categoría.</p>}</div>
+  </main>
+}
+
+function OffersPage() {
+  const { products, offers, apiEnabled } = useStore()
+  const activeOffers = apiEnabled ? [] : offers.filter(offer => offer.active)
+  const offeredProducts = products.map(product => ({
+    product,
+    offer: activeOffers.find(offer => offer.categoria === product.categoria),
+  })).filter(item => item.offer)
+  return <main className="container my-5"><header className="text-center mb-5"><span className="badge bg-danger mb-2">Precios especiales</span><h1 className="display-5 fw-bold">Ofertas</h1><p className="text-muted">Aprovecha los descuentos disponibles para tu oficina.</p></header>
+    {activeOffers.map(offer => <section className="mb-5" key={offer.id}><div className="p-4 rounded bg-light border mb-3"><span className="badge bg-danger mb-2">{offer.descuento}% de descuento</span><h2 className="h3">{offer.titulo}</h2><p className="mb-0">Categoría: {offer.categoria}</p></div>
+      <div className="row">{offeredProducts.filter(item => item.offer.id === offer.id).map(({ product }) => <ProductCard key={product.id} product={product} />)}</div>
+    </section>)}
+    {!activeOffers.length && <p className="text-center text-muted">{apiEnabled ? 'Las ofertas están disponibles en el modo de demostración; el backend actual no administra promociones.' : 'No hay ofertas disponibles en este momento.'}</p>}
+  </main>
+}
+
 function ProductDetailPage() {
   const { id } = useParams()
-  const { products, cart, setCart } = useStore()
+  const { products, cart, setCart, offers, apiEnabled, backendReady, apiError } = useStore()
   const product = products.find(item => String(item.id) === id)
   const [quantity, setQuantity] = useState(1)
   if (!product) return <main className="container my-5 text-center"><h1 className="h3">Producto no encontrado</h1><Link to="/productos" className="btn btn-primary mt-3">Volver al catálogo</Link></main>
   const images = product.imagenes?.length ? product.imagenes : [product.imagen]
+  const offer = !apiEnabled && offers.find(item => item.active && item.categoria === product.categoria)
+  const netPrice = offer ? Math.round(product.precio * (1 - offer.descuento / 100)) : product.precio
   const addToCart = () => {
     const currentQuantity = cart.find(item => item.id === product.id)?.cantidad || 0
     if (currentQuantity + quantity > product.stock) {
@@ -312,7 +365,7 @@ function ProductDetailPage() {
       const item = current.find(entry => entry.id === product.id)
       return item
         ? current.map(entry => entry.id === product.id ? { ...entry, cantidad: entry.cantidad + quantity } : entry)
-        : [...current, { ...product, cantidad: quantity }]
+        : [...current, { ...product, precio: netPrice, precioOriginal: product.precio, oferta: offer?.titulo, cantidad: quantity }]
     })
   }
   return <main className="container my-5"><div className="row bg-white p-4 rounded shadow-sm border">
@@ -323,11 +376,13 @@ function ProductDetailPage() {
     <div className="col-md-6 d-flex flex-column justify-content-center">
       <span className="badge bg-secondary mb-2 align-self-start">{product.categoria}</span>
       <h1 className="h2">{product.nombre}</h1><p className="text-muted">SKU / Código: <strong>{product.codigo}</strong></p>
-      <h2 className="text-primary fw-bold my-3">{money(withTax(product.precio))}</h2>
+      {offer && <span className="badge bg-danger mb-2 align-self-start">{offer.descuento}% de descuento · {offer.titulo}</span>}
+      <h2 className="text-primary fw-bold my-3">{money(withTax(netPrice))}</h2>
+      {offer && <p className="text-muted"><del>{money(withTax(product.precio))}</del> precio anterior</p>}
       <p className="text-muted small">Precio con IVA incluido</p><p>Stock disponible: <strong>{product.stock} unidades</strong></p>
       <div className="d-flex gap-2 mt-3">
         <input className="form-control" type="number" min="1" max={product.stock} value={quantity} onChange={event => setQuantity(Math.max(1, Number(event.target.value)))} aria-label="Cantidad" style={{ maxWidth: 90 }} />
-        <button className="btn btn-danger btn-lg" onClick={addToCart} disabled={product.stock < 1}><i className="bi bi-cart-plus" /> Agregar al Carrito</button>
+        <button className="btn btn-danger btn-lg" onClick={addToCart} disabled={product.stock < 1 || (apiEnabled && (!backendReady || Boolean(apiError)))}><i className="bi bi-cart-plus" /> Agregar al Carrito</button>
         <Link to="/productos" className="btn btn-outline-secondary btn-lg">Volver</Link>
       </div>
     </div>
@@ -335,9 +390,10 @@ function ProductDetailPage() {
 }
 
 function CartPage() {
-  const { cart, setCart, products, setProducts, activeUser, orders, setOrders, apiEnabled, apiRequest, refreshBackend, setApiError } = useStore()
+  const { cart, setCart, products, setProducts, activeUser, orders, setOrders, apiEnabled, apiRequest, refreshBackend, setApiError, backendReady, apiError } = useStore()
   const [checkout, setCheckout] = useState(false)
   const [notice, setNotice] = useState('')
+  const navigate = useNavigate()
   const [shipping, setShipping] = useState(() => ({
     nombre: activeUser?.nombre || '', telefono: activeUser?.telefono || '',
     direccion: activeUser?.direccion || '', comuna: activeUser?.comuna || '',
@@ -357,6 +413,10 @@ function CartPage() {
   }))
   const checkoutOrder = async event => {
     event.preventDefault()
+    if (apiEnabled && (!backendReady || apiError)) {
+      setNotice('No se puede confirmar la compra hasta recuperar la conexión con el catálogo.')
+      return
+    }
     if (!activeUser) {
       setNotice('Debes iniciar sesión para finalizar tu compra.')
       return
@@ -389,12 +449,12 @@ function CartPage() {
         }])
         setCart([])
         setCheckout(false)
-        setNotice('¡Pedido confirmado! Puedes revisar el pedido en tu perfil.')
         refreshBackend(activeUser).catch(error => {
           setApiError(`El pedido se confirmó, pero no se pudo actualizar la vista: ${error.message}`)
         })
+        navigate(`/compra/resultado?estado=exito&pedido=${order.id}`)
       } catch (error) {
-        setNotice(`No se pudo confirmar el pedido: ${error.message}`)
+        navigate(`/compra/resultado?estado=error&motivo=${encodeURIComponent(error.message)}`)
       }
       return
     }
@@ -410,7 +470,7 @@ function CartPage() {
     setOrders([...orders, order])
     setCart([])
     setCheckout(false)
-    setNotice('¡Pedido confirmado! Puedes revisar el pedido en tu perfil.')
+    navigate(`/compra/resultado?estado=exito&pedido=${order.id}`)
   }
   return <main className="container my-5">
     <h1 className="h2 mb-4"><i className="bi bi-cart3" /> Carrito de Compras</h1>
@@ -434,9 +494,11 @@ function CartPage() {
         <div className="d-flex justify-content-between my-2"><span>Subtotal neto:</span><span>{money(subtotal)}</span></div>
         <div className="d-flex justify-content-between my-2"><span>IVA incluido (19%):</span><span>{money(total - subtotal)}</span></div><hr />
         <div className="d-flex justify-content-between fs-5 fw-bold mb-3"><span>Total a pagar:</span><span className="text-primary">{money(total)}</span></div>
-        <button className="btn btn-success w-100 py-2 fw-bold" disabled={!cart.length} onClick={() => {
-          if (!activeUser) setNotice('Debes iniciar sesión para finalizar tu compra.')
-          else setCheckout(!checkout)
+        <button className="btn btn-success w-100 py-2 fw-bold" disabled={!cart.length || (apiEnabled && (!backendReady || Boolean(apiError)))} onClick={() => {
+          if (!activeUser) {
+            setNotice('Debes iniciar sesión para finalizar tu compra.')
+            navigate('/login')
+          } else setCheckout(!checkout)
         }}>Pagar Pedido</button>
         <Link to="/productos" className="btn btn-link w-100 mt-2 text-decoration-none">Seguir comprando</Link>
       </div></div></div>
@@ -663,14 +725,14 @@ function RegisterPage() {
   </AuthLayout>
 }
 
-function Field({ name, label, type = 'text', placeholder, minLength, maxLength, required = true, defaultValue }) {
+export function Field({ name, label, type = 'text', placeholder, minLength, maxLength, required = true, defaultValue }) {
   return <div className="mb-3"><label className="form-label" htmlFor={`field-${name}`}>{label}</label><input id={`field-${name}`} name={name} type={type} className="form-control" required={required} placeholder={placeholder} minLength={minLength} maxLength={maxLength} defaultValue={defaultValue} /></div>
 }
 
 function ProfilePage() {
   const { activeUser, orders } = useStore()
   if (!activeUser) return <main className="container my-5 text-center"><h1 className="h3">Inicia sesión para ver tu perfil.</h1><Link className="btn btn-primary mt-3" to="/login">Ingresar</Link></main>
-  const userOrders = orders.filter(order => order.usuarioId === activeUser.id)
+  const userOrders = orders.filter(order => String(order.usuarioId) === String(activeUser.id))
   const initials = activeUser.nombre.split(/\s+/).filter(Boolean).slice(0, 2).map(part => part[0]).join('').toUpperCase()
   return <main className="container my-5"><h1 className="h2 mb-4">Mi Perfil</h1><div className="card border-0 shadow-sm mb-4"><div className="card-body d-flex align-items-center gap-3">
     <div className="rounded-circle bg-primary text-white fs-3 fw-bold d-flex align-items-center justify-content-center" style={{ width: 72, height: 72 }}>{initials}</div>
@@ -684,8 +746,44 @@ function ProfilePage() {
       ].map(([label, value]) => <div className="col-md-6 mb-2" key={label}><dt>{label}</dt><dd>{value}</dd></div>)}
     </dl></div></div>
     <h2 className="h4">Mis pedidos</h2><div className="table-responsive card border-0 shadow-sm"><table className="table table-hover mb-0"><thead className="table-light"><tr><th>Pedido</th><th>Fecha</th><th>Total</th><th>Estado</th></tr></thead><tbody>
-      {userOrders.length ? userOrders.map(order => <tr key={order.id}><td>#{order.id}</td><td>{order.fecha}</td><td>{money(order.total)}</td><td><span className="badge bg-success">{order.estado}</span></td></tr>) : <tr><td colSpan="4" className="text-center text-muted py-4">Aún no tienes compras registradas.</td></tr>}
+      {userOrders.length ? userOrders.map(order => <tr key={order.id}><td><Link to={`/pedidos/${order.id}`}>#{order.id}</Link></td><td>{order.fecha}</td><td>{money(order.total)}</td><td><span className="badge bg-success">{order.estado}</span></td></tr>) : <tr><td colSpan="4" className="text-center text-muted py-4">Aún no tienes compras registradas.</td></tr>}
     </tbody></table></div>
+  </main>
+}
+
+function CheckoutResultPage() {
+  const location = useLocation()
+  const params = new URLSearchParams(location.search)
+  const succeeded = params.get('estado') === 'exito'
+  const orderId = params.get('pedido')
+  const reason = params.get('motivo')
+  return <main className="container my-5"><div className={`card mx-auto shadow-sm border-0 text-center p-4 ${succeeded ? 'border-success' : 'border-danger'}`} style={{ maxWidth: 760 }}>
+    <i className={`bi ${succeeded ? 'bi-check-circle-fill text-success' : 'bi-x-circle-fill text-danger'}`} style={{ fontSize: '3rem' }} />
+    <h1 className="h2 mt-3">{succeeded ? '¡Compra exitosa!' : 'No se pudo realizar el pago'}</h1>
+    {succeeded ? <><p className="lead">Tu pedido #{orderId} fue registrado correctamente.</p><p>Revisa el detalle y el estado desde tu perfil.</p></> : <><p className="lead">{reason || 'Ocurrió un problema al procesar el pedido.'}</p><p>No se completó el cobro. Puedes revisar tu carrito e intentarlo nuevamente.</p></>}
+    <div className="d-flex flex-wrap gap-2 justify-content-center mt-3">
+      {succeeded ? <Link to={`/pedidos/${orderId}`} className="btn btn-success">Ver pedido</Link> : <Link to="/carrito" className="btn btn-danger">Volver a intentar</Link>}
+      <Link to="/productos" className="btn btn-outline-secondary">Seguir comprando</Link>
+    </div>
+  </div></main>
+}
+
+function OrderDetailPage() {
+  const { id } = useParams()
+  const { orders, activeUser } = useStore()
+  const order = orders.find(item => String(item.id) === id)
+  if (!order) return <main className="container my-5 text-center"><h1 className="h3">Pedido no encontrado</h1><Link to={activeUser?.rol === 'ADMIN' ? '/admin/pedidos' : '/perfil'}>Volver</Link></main>
+  if (!activeUser || (activeUser.rol !== 'ADMIN' && String(order.usuarioId) !== String(activeUser.id))) {
+    return <main className="container my-5 text-center"><h1 className="h3">No tienes permiso para ver este pedido.</h1><Link to="/login">Iniciar sesión</Link></main>
+  }
+  const items = order.items || []
+  return <main className="container my-5"><Link to={activeUser.rol === 'ADMIN' ? '/admin/pedidos' : '/perfil'} className="text-decoration-none"><i className="bi bi-arrow-left" /> Volver a pedidos</Link>
+    <div className="d-flex flex-wrap justify-content-between align-items-center mt-3 mb-4"><div><h1 className="h2">Pedido #{order.id}</h1><p className="text-muted mb-0">{order.fecha || (order.createdAt ? new Date(order.createdAt).toLocaleDateString('es-CL') : '')}</p></div><span className="badge bg-success fs-6">{order.estado || order.status}</span></div>
+    <div className="card border-0 shadow-sm mb-4"><div className="table-responsive"><table className="table table-hover align-middle mb-0"><thead className="table-light"><tr><th>Producto</th><th>Precio</th><th>Cantidad</th><th>Total</th></tr></thead><tbody>
+      {items.map((item, index) => <tr key={item.id || `${item.productoId || item.id}-${index}`}><td><img src={item.imagen} width="48" height="48" className="rounded object-fit-cover me-2" alt="" />{item.nombre || item.productName}</td><td>{money(withTax(item.precio ?? item.price))}</td><td>{item.cantidad ?? item.quantity}</td><td>{money((item.totalLinea ?? item.lineTotal) || withTax(item.precio ?? item.price) * (item.cantidad ?? item.quantity))}</td></tr>)}
+      {!items.length && <tr><td colSpan="4" className="text-center py-4">El pedido no tiene líneas.</td></tr>}
+    </tbody></table></div><div className="card-body text-end"><p className="mb-1">Subtotal neto: {money(order.subtotal)}</p><p className="mb-1">IVA: {money(order.iva)}</p><h2 className="h4">Total pagado: {money(order.total)}</h2></div></div>
+    {order.despacho && <div className="card border-0 shadow-sm"><div className="card-body"><h2 className="h5">Dirección de entrega</h2><p className="mb-1">{order.despacho.nombre}, {order.despacho.telefono}</p><p className="mb-1">{order.despacho.direccion}, {order.despacho.comuna}, {order.despacho.region}</p><p className="mb-0 text-muted">{order.despacho.observaciones}</p></div></div>}
   </main>
 }
 
@@ -693,7 +791,12 @@ function AdminLayout() {
   const { activeUser } = useStore()
   const location = useLocation()
   if (activeUser?.rol !== 'ADMIN') return <main className="container my-5 text-center"><h1 className="h3">Acceso restringido a administradores.</h1><Link className="btn btn-primary mt-3" to="/login">Iniciar sesión como administrador</Link></main>
-  const links = [['/admin', 'Dashboard'], ['/admin/productos', 'Productos'], ['/admin/usuarios', 'Usuarios'], ['/admin/mensajes', 'Mensajes']]
+  const links = [
+    ['/admin', 'Dashboard'], ['/admin/productos', 'Productos'],
+    ['/admin/categorias', 'Categorías'], ['/admin/ofertas', 'Ofertas'],
+    ['/admin/pedidos', 'Pedidos'], ['/admin/reportes', 'Reportes'],
+    ['/admin/usuarios', 'Usuarios'], ['/admin/mensajes', 'Mensajes'],
+  ]
   return <><nav className="navbar navbar-expand navbar-dark bg-dark"><div className="container-fluid"><Link className="navbar-brand" to="/admin"><img src="/img/logo-prostock.svg" className="brand-logo" alt="Prostock" /> <span className="admin-label">ADMIN</span></Link><Link to="/" className="btn btn-outline-light btn-sm">Volver a la Tienda</Link></div></nav><BackendNotice />
     <div className="container-fluid my-4"><div className="row"><aside className="col-md-3 col-lg-2 mb-3"><div className="list-group shadow-sm">{links.map(([to, label]) => <NavLink key={to} to={to} end={to === '/admin'} className={({ isActive }) => `list-group-item list-group-item-action${isActive || (to !== '/admin' && location.pathname.startsWith(to)) ? ' active' : ''}`}>{label}</NavLink>)}</div></aside><section className="col-md-9 col-lg-10"><Outlet /></section></div></div>
   </>
@@ -731,6 +834,166 @@ function AdminProductsPage() {
       {sorted.map(product => <tr key={product.id}><td>{product.codigo}</td><td>{product.nombre}</td><td>{product.categoria}</td><td>{money(withTax(product.precio))} <small>IVA incl.</small></td><td>{product.stock}</td><td><Link to={`/admin/productos/${product.id}`} className="btn btn-sm btn-warning me-1" aria-label={`Editar ${product.nombre}`}><i className="bi bi-pencil" /></Link><button className="btn btn-sm btn-danger" onClick={() => remove(product.id)} aria-label={`Eliminar ${product.nombre}`}><i className="bi bi-trash" /></button></td></tr>)}
       {!sorted.length && <tr><td colSpan="6" className="text-center py-4">No hay productos.</td></tr>}
     </tbody></table></div></div>
+  </>
+}
+
+function AdminCategoriesPage() {
+  const { categories, setCategories, products, offers, apiEnabled } = useStore()
+  const [error, setError] = useState('')
+  if (apiEnabled) return <div className="alert alert-info" role="status">La administración de categorías está disponible en el modo de demostración. El backend actual guarda la categoría como parte del producto y no expone un servicio CRUD de categorías.</div>
+  const remove = id => {
+    const category = categories.find(item => String(item.id) === String(id))
+    if (products.some(product => product.categoria === category?.nombre) || offers.some(offer => offer.categoria === category?.nombre)) {
+      setError('No se puede eliminar una categoría que todavía está en uso por productos u ofertas.')
+      return
+    }
+    try {
+      mockDatabase.categories.remove(id)
+      setCategories(mockDatabase.categories.list())
+      setError('')
+    } catch (requestError) {
+      setError(requestError.message)
+    }
+  }
+  return <><div className="d-flex justify-content-between align-items-center mb-3"><h1 className="h3">Gestión de Categorías</h1><Link to="/admin/categorias/nueva" className="btn btn-primary">+ Nueva categoría</Link></div>
+    {error && <div className="alert alert-danger" role="alert">{error}</div>}
+    <div className="card border-0 shadow-sm"><div className="table-responsive"><table className="table table-hover align-middle mb-0"><thead className="table-dark"><tr><th>Categoría</th><th>Productos</th><th>Acciones</th></tr></thead><tbody>
+      {categories.map(category => <tr key={category.id}><td>{category.nombre}</td><td>{products.filter(product => product.categoria === category.nombre).length}</td><td><Link className="btn btn-sm btn-warning me-1" to={`/admin/categorias/${category.id}`}>Editar</Link><button className="btn btn-sm btn-danger" onClick={() => remove(category.id)}>Eliminar</button></td></tr>)}
+      {!categories.length && <tr><td colSpan="3" className="text-center py-4">No hay categorías.</td></tr>}
+    </tbody></table></div></div>
+  </>
+}
+
+function AdminCategoryForm() {
+  const { id } = useParams()
+  const { categories, setCategories, products, setProducts, offers, setOffers, apiEnabled } = useStore()
+  const navigate = useNavigate()
+  const current = categories.find(category => String(category.id) === id)
+  const [error, setError] = useState('')
+  const submit = event => {
+    event.preventDefault()
+    const name = new FormData(event.currentTarget).get('nombre').trim()
+    if (categories.some(category => category.nombre.toLowerCase() === name.toLowerCase() && String(category.id) !== id)) {
+      setError('Ya existe una categoría con ese nombre.')
+      return
+    }
+    if (apiEnabled) return <div className="alert alert-info" role="status">La administración de categorías está disponible en el modo de demostración; no se guardan cambios en los microservicios.</div>
+    try {
+      const saved = current
+        ? mockDatabase.categories.update(current.id, { nombre: name })
+        : mockDatabase.categories.create({ nombre: name })
+      if (current) setProducts(products.map(product => product.categoria === current.nombre ? { ...product, categoria: saved.nombre } : product))
+      if (current) setOffers(offers.map(offer => offer.categoria === current.nombre ? { ...offer, categoria: saved.nombre } : offer))
+      setCategories(mockDatabase.categories.list())
+      navigate('/admin/categorias')
+    } catch (requestError) {
+      setError(requestError.message)
+    }
+  }
+  if (id && !current) return <><h1 className="h3">Categoría no encontrada.</h1><Link to="/admin/categorias">Volver a categorías</Link></>
+  return <div className="card border-0 shadow-sm"><div className="card-body p-4"><h1 className="h4">{current ? 'Editar categoría' : 'Nueva categoría'}</h1>
+    {error && <div className="alert alert-danger" role="alert">{error}</div>}
+    <form onSubmit={submit}><Field name="nombre" label="Nombre de categoría" defaultValue={current?.nombre} />
+      <div className="d-flex justify-content-between"><Link className="btn btn-outline-secondary" to="/admin/categorias">Cancelar</Link><button className="btn btn-success">Guardar categoría</button></div>
+    </form>
+  </div></div>
+}
+
+function AdminOffersPage() {
+  const { offers, setOffers, apiEnabled } = useStore()
+  const [error, setError] = useState('')
+  const remove = id => {
+    if (!window.confirm('¿Eliminar esta oferta?')) return
+    try {
+      mockDatabase.offers.remove(id)
+      setOffers(mockDatabase.offers.list())
+      setError('')
+    } catch (requestError) {
+      setError(requestError.message)
+    }
+  }
+  if (apiEnabled) return <div className="alert alert-info" role="status">La gestión de ofertas está disponible en el modo de demostración. Los microservicios actuales no administran promociones ni aplican descuentos.</div>
+  return <><div className="d-flex justify-content-between align-items-center mb-3"><h1 className="h3">Gestión de Ofertas</h1><Link to="/admin/ofertas/nueva" className="btn btn-primary">+ Nueva oferta</Link></div>
+    {error && <div className="alert alert-danger" role="alert">{error}</div>}
+    <div className="card border-0 shadow-sm"><div className="table-responsive"><table className="table table-hover align-middle mb-0"><thead className="table-dark"><tr><th>Oferta</th><th>Categoría</th><th>Descuento</th><th>Estado</th><th>Acciones</th></tr></thead><tbody>
+      {offers.map(offer => <tr key={offer.id}><td>{offer.titulo}</td><td>{offer.categoria}</td><td>{offer.descuento}%</td><td><span className={`badge ${offer.active ? 'bg-success' : 'bg-secondary'}`}>{offer.active ? 'Activa' : 'Inactiva'}</span></td><td><Link className="btn btn-sm btn-warning me-1" to={`/admin/ofertas/${offer.id}`}>Editar</Link><button className="btn btn-sm btn-danger" onClick={() => remove(offer.id)}>Eliminar</button></td></tr>)}
+      {!offers.length && <tr><td colSpan="5" className="text-center py-4">No hay ofertas.</td></tr>}
+    </tbody></table></div></div>
+  </>
+}
+
+function AdminOfferForm() {
+  const { id } = useParams()
+  const { offers, setOffers, categories, apiEnabled } = useStore()
+  const navigate = useNavigate()
+  const current = offers.find(offer => String(offer.id) === id)
+  const [error, setError] = useState('')
+  const submit = event => {
+    event.preventDefault()
+    const form = new FormData(event.currentTarget)
+    const payload = {
+      titulo: String(form.get('titulo')).trim(),
+      categoria: String(form.get('categoria')),
+      descuento: Number(form.get('descuento')),
+      active: form.get('active') === 'true',
+    }
+    if (apiEnabled) return <div className="alert alert-info" role="status">La gestión de ofertas está disponible únicamente en el modo de demostración.</div>
+    if (!payload.categoria || payload.descuento < 1 || payload.descuento > 90) {
+      setError('Selecciona una categoría e ingresa un descuento entre 1 y 90%.')
+      return
+    }
+    if (payload.active && offers.some(offer => offer.active && offer.categoria === payload.categoria && String(offer.id) !== id)) {
+      setError('Ya existe una oferta activa para esta categoría.')
+      return
+    }
+    try {
+      if (current) mockDatabase.offers.update(current.id, payload)
+      else mockDatabase.offers.create(payload)
+      setOffers(mockDatabase.offers.list())
+      navigate('/admin/ofertas')
+    } catch (requestError) {
+      setError(requestError.message)
+    }
+  }
+  if (id && !current) return <><h1 className="h3">Oferta no encontrada.</h1><Link to="/admin/ofertas">Volver a ofertas</Link></>
+  return <div className="card border-0 shadow-sm"><div className="card-body p-4"><h1 className="h4">{current ? 'Editar oferta' : 'Nueva oferta'}</h1>
+    {error && <div className="alert alert-danger" role="alert">{error}</div>}
+    <form onSubmit={submit}><Field name="titulo" label="Nombre de la oferta" defaultValue={current?.titulo} />
+      <div className="mb-3"><label className="form-label" htmlFor="offer-category">Categoría</label><select id="offer-category" name="categoria" className="form-select" required defaultValue={current?.categoria || ''}><option value="">Selecciona una categoría</option>{categories.map(category => <option key={category.id} value={category.nombre}>{category.nombre}</option>)}</select></div>
+      <Field name="descuento" label="Descuento (%)" type="number" min="1" max="90" defaultValue={current?.descuento || 10} />
+      <div className="mb-3"><label className="form-label" htmlFor="offer-active">Estado</label><select id="offer-active" name="active" className="form-select" defaultValue={String(current?.active ?? true)}><option value="true">Activa</option><option value="false">Inactiva</option></select></div>
+      <div className="d-flex justify-content-between"><Link className="btn btn-outline-secondary" to="/admin/ofertas">Cancelar</Link><button className="btn btn-success">Guardar oferta</button></div>
+    </form>
+  </div></div>
+}
+
+function AdminOrdersPage() {
+  const { orders } = useStore()
+  const sorted = [...orders].sort((left, right) => Number(right.id) - Number(left.id))
+  return <><h1 className="h3 mb-3">Historial de compras</h1><div className="card border-0 shadow-sm"><div className="table-responsive"><table className="table table-hover align-middle mb-0"><thead className="table-dark"><tr><th>N.º pedido</th><th>Usuario</th><th>Fecha</th><th>Productos</th><th>Total</th><th>Estado</th><th>Detalle</th></tr></thead><tbody>
+    {sorted.map(order => <tr key={order.id}><td>#{order.id}</td><td>{order.usuarioId}</td><td>{order.fecha || (order.createdAt ? new Date(order.createdAt).toLocaleDateString('es-CL') : '')}</td><td>{order.items?.length || 0}</td><td>{money(order.total)}</td><td><span className="badge bg-success">{order.estado || order.status}</span></td><td><Link className="btn btn-sm btn-outline-primary" to={`/pedidos/${order.id}`}>Ver pedido</Link></td></tr>)}
+    {!sorted.length && <tr><td colSpan="7" className="text-center py-4">Todavía no hay compras registradas.</td></tr>}
+  </tbody></table></div></div>
+  </>
+}
+
+function AdminReportsPage() {
+  const { products, orders, users, messages } = useStore()
+  const revenue = orders.reduce((sum, order) => sum + Number(order.total || 0), 0)
+  const unitsSold = orders.reduce((sum, order) => sum + (order.items || []).reduce((lineSum, item) => lineSum + Number(item.cantidad ?? item.quantity ?? 0), 0), 0)
+  const lowStock = products.filter(product => Number(product.stock) <= 5)
+  return <><h1 className="h3 mb-4">Reportes</h1><div className="row g-3 mb-4">
+    {[
+      ['Ventas totales', money(revenue), 'success'],
+      ['Pedidos procesados', orders.length, 'primary'],
+      ['Unidades vendidas', unitsSold, 'info'],
+      ['Usuarios registrados', users.length, 'secondary'],
+      ['Mensajes pendientes', messages.filter(message => !message.atendido).length, 'warning'],
+    ].map(([label, value, color]) => <div className="col-sm-6 col-xl-4" key={label}><div className={`card border-0 shadow-sm bg-${color} ${color === 'warning' || color === 'info' ? 'text-dark' : 'text-white'} p-3`}><h2 className="h6">{label}</h2><p className="h3 mb-0">{value}</p></div></div>)}
+  </div><h2 className="h4">Alertas de inventario bajo</h2><div className="card border-0 shadow-sm"><div className="table-responsive"><table className="table table-hover mb-0"><thead className="table-light"><tr><th>Código</th><th>Producto</th><th>Stock disponible</th></tr></thead><tbody>
+    {lowStock.map(product => <tr key={product.id}><td>{product.codigo}</td><td>{product.nombre}</td><td><span className="badge bg-warning text-dark">{product.stock}</span></td></tr>)}
+    {!lowStock.length && <tr><td colSpan="3" className="text-center py-4">No hay productos con stock crítico.</td></tr>}
+  </tbody></table></div></div>
   </>
 }
 
@@ -919,6 +1182,8 @@ function PageTitle() {
     const title = pageTitles[location.pathname]
       || (location.pathname.startsWith('/admin') ? 'Administración' : null)
       || (location.pathname.startsWith('/producto/') ? 'Detalle de Producto' : null)
+      || (location.pathname.startsWith('/categorias/') ? 'Productos por categoría' : null)
+      || (location.pathname.startsWith('/pedidos/') ? 'Detalle del pedido' : null)
       || (location.pathname.startsWith('/blogs/') ? 'Artículo del Blog' : null)
       || 'Prostock'
     document.title = `${title} | Prostock`
@@ -951,6 +1216,11 @@ export default function App() {
       <Route path="productos" element={<ProductsPage />} />
       <Route path="producto/:id" element={<ProductDetailPage />} />
       <Route path="carrito" element={<CartPage />} />
+      <Route path="compra/resultado" element={<CheckoutResultPage />} />
+      <Route path="pedidos/:id" element={<OrderDetailPage />} />
+      <Route path="categorias" element={<CategoriesPage />} />
+      <Route path="categorias/:category" element={<CategoryDetailPage />} />
+      <Route path="ofertas" element={<OffersPage />} />
       <Route path="nosotros" element={<AboutPage />} />
       <Route path="blogs" element={<BlogPage />} />
       <Route path="blogs/:slug" element={<BlogDetailPage />} />
@@ -964,6 +1234,14 @@ export default function App() {
       <Route path="productos" element={<AdminProductsPage />} />
       <Route path="productos/nuevo" element={<AdminProductForm />} />
       <Route path="productos/:id" element={<AdminProductForm />} />
+      <Route path="categorias" element={<AdminCategoriesPage />} />
+      <Route path="categorias/nueva" element={<AdminCategoryForm />} />
+      <Route path="categorias/:id" element={<AdminCategoryForm />} />
+      <Route path="ofertas" element={<AdminOffersPage />} />
+      <Route path="ofertas/nueva" element={<AdminOfferForm />} />
+      <Route path="ofertas/:id" element={<AdminOfferForm />} />
+      <Route path="pedidos" element={<AdminOrdersPage />} />
+      <Route path="reportes" element={<AdminReportsPage />} />
       <Route path="usuarios" element={<AdminUsersPage />} />
       <Route path="usuarios/nuevo" element={<AdminUserForm />} />
       <Route path="usuarios/:id" element={<AdminUserForm />} />
