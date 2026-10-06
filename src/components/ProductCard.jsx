@@ -6,9 +6,9 @@ import ProductImage from './ProductImage.jsx'
 import { money, withTax } from '../utils/storeFormatters.js'
 
 export default function ProductCard({ product }) {
+  const { cart, setCart } = useStore()
   if (!product) return null
 
-  const { cart, setCart } = useStore()
   const stock = Number(product.stock) || 0
   const itemInCart = cart.find(entry => entry.id === product.id)
   const addToCart = () => {

@@ -52,6 +52,13 @@ describe('tarjeta de producto', () => {
     expect(container.querySelector('img').getAttribute('alt')).toBe('Estuche Escolar')
   })
 
+  it('permite que el producto aparezca después del primer render vacío', () => {
+    renderCard([], null)
+    renderCard()
+
+    expect(container.textContent).toContain('Estuche Escolar')
+  })
+
   it('al hacer clic solicita actualizar el estado del carrito', () => {
     renderCard()
 
