@@ -10,8 +10,8 @@ const legacyPaths = {
   '/login.html': '/login',
   '/registro.html': '/registro',
   '/perfil.html': '/perfil',
-  '/detalle-blog.html': '/blogs/inventario',
-  '/detalle-blog-2.html': '/blogs/insumos',
+  '/detalle-blog.html': '/blogs/insumos',
+  '/detalle-blog-2.html': '/blogs/inventario',
   '/admin/index.html': '/admin',
   '/admin/productos-listar.html': '/admin/productos',
   '/admin/usuarios-listar.html': '/admin/usuarios',
@@ -35,7 +35,7 @@ function routeToReact(request, response, next) {
     return
   }
 
-  const isReactRoute = /^\/(productos|carrito|compra|pedidos|categorias|ofertas|nosotros|blogs|contacto|login|registro|perfil|producto|admin)(\/|$)/.test(url.pathname)
+  const isReactRoute = /^\/(productos|carrito|nosotros|blogs|contacto|login|registro|perfil|producto|admin)(\/|$)/.test(url.pathname)
   if (!isReactRoute) return next()
 
   request.url = `/index.html${url.search}`

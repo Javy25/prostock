@@ -5,6 +5,7 @@
     "nombre": "Resma de papel bond tamaño carta (500 hojas, 75g)",
     "categoria": "Papelería y Oficina",
     "precio": 3290,
+    "precioOferta": 2990,
     "stock": 55,
     "imagen": "https://media.falabella.com/falabellaCL/155704368_01/w=1500,h=1500,fit=cover",
     "imagenes": ["https://media.falabella.com/falabellaCL/155704368_01/w=1500,h=1500,fit=cover",
@@ -60,6 +61,7 @@
     "nombre": "Cuaderno Universitario Paint 100hj 7mm Proarte Surtido",
     "categoria": "Escolar",
     "precio": 1790,
+    "precioOferta": 1590,
     "stock": 80,
     "imagen": "https://media.falabella.com/falabellaCL/151011056_01/w=1500,h=1500,fit=cover",
     "imagenes": ["https://media.falabella.com/falabellaCL/151011056_01/w=1500,h=1500,fit=cover",
@@ -127,6 +129,7 @@
     "nombre": "Toner G&G TN1060 - HL 1110 /HL 1112 / DCP 1512",
     "categoria": "Insumos",
     "precio": 6990,
+    "precioOferta": 6290,
     "stock": 75,
     "imagen": "https://media.falabella.com/falabellaCL/139865154_01/w=1500,h=1500,fit=cover"
   },

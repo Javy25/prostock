@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
   BrowserRouter,
   Link,
@@ -13,7 +13,6 @@ import {
 } from 'react-router-dom'
 import regions from '../data/regiones.json'
 import { apiEnabled, apiRequest } from './api.js'
-import { mockDatabase } from './data/mockDatabase.js'
 
 const StoreContext = createContext(null)
 const money = value => `$${Number(value || 0).toLocaleString('es-CL')}`
@@ -22,83 +21,80 @@ const createId = () => Date.now()
 const formatToday = () => new Date().toLocaleDateString('es-CL')
 const pageTitles = {
   '/': 'Inicio', '/productos': 'Catálogo de Productos', '/carrito': 'Carrito de Compras',
-  '/categorias': 'Categorías', '/ofertas': 'Ofertas', '/compra/resultado': 'Resultado de compra',
   '/nosotros': 'Nosotros', '/blogs': 'Blog y Noticias', '/contacto': 'Contacto',
   '/login': 'Iniciar Sesión', '/registro': 'Crear una Cuenta', '/perfil': 'Mi Perfil',
 }
-function useStoredValue(repository) {
-  const [value, setValue] = useState(() => repository.list())
+const readStored = (key, fallback) => {
+  const stored = localStorage.getItem(key)
+  if (stored === null) {
+    localStorage.setItem(key, JSON.stringify(fallback))
+    return fallback
+  }
+  return JSON.parse(stored)
+}
+
+function useStoredValue(key, fallback) {
+  const [value, setValue] = useState(() => readStored(key, fallback))
   const update = useCallback(nextValue => {
     setValue(current => {
       const resolved = typeof nextValue === 'function' ? nextValue(current) : nextValue
-      return repository.replace(resolved)
+      localStorage.setItem(key, JSON.stringify(resolved))
+      return resolved
     })
-  }, [repository])
+  }, [key])
   return [value, update]
 }
 
 function StoreProvider({ children }) {
-  const [products, setProducts] = useStoredValue(mockDatabase.products)
-  const [cart, setCart] = useStoredValue(mockDatabase.cart)
-  const [categories, setCategories] = useStoredValue(mockDatabase.categories)
-  const [offers, setOffers] = useStoredValue(mockDatabase.offers)
-  const [users, setUsers] = useStoredValue(mockDatabase.users)
-  const [orders, setOrders] = useStoredValue(mockDatabase.orders)
-  const [messages, setMessages] = useStoredValue(mockDatabase.messages)
-  const [activeUser, setActiveUserState] = useState(() => {
-    if (apiEnabled && !localStorage.getItem('prostock_access_token')) return null
-    const stored = localStorage.getItem('usuarioActivo')
-    return stored === null ? null : JSON.parse(stored)
-  })
-  const setActiveUser = useCallback(nextValue => {
-    setActiveUserState(current => {
-      const resolved = typeof nextValue === 'function' ? nextValue(current) : nextValue
-      if (resolved === null) localStorage.removeItem('usuarioActivo')
-      else localStorage.setItem('usuarioActivo', JSON.stringify(resolved))
-      return resolved
-    })
-  }, [])
+  const [products, setProducts] = useStoredValue('productos_db', productsSeed)
+  const [cart, setCart] = useStoredValue('carrito', [])
+  const [users, setUsers] = useStoredValue('usuarios_db', [
+    { id: 999, nombre: 'Administrador Prostock', email: 'admin@duoc.cl', password: 'admin123', rol: 'ADMIN' },
+  ])
+  const [orders, setOrders] = useStoredValue('pedidos_db', [])
+  const [messages, setMessages] = useStoredValue('mensajes_contacto_db', [])
+  const [activeUser, setActiveUser] = useStoredValue('usuarioActivo', null)
   const [apiError, setApiError] = useState('')
   const [backendReady, setBackendReady] = useState(!apiEnabled)
 
-  const refreshBackend = useCallback(async user => {
+  const refreshBackend = useCallback(async (user = activeUser) => {
     const remoteProducts = await apiRequest('/api/products')
     setProducts(remoteProducts)
     if (!user) return
     const [remoteUsers, remoteOrders, remoteMessages] = await Promise.all([
-      user.rol === 'ADMIN' ? apiRequest('/api/users') : Promise.resolve(null),
+      user.rol === 'ADMIN' ? apiRequest('/api/users') : Promise.resolve(users),
       apiRequest(user.rol === 'ADMIN' ? '/api/orders' : `/api/orders?usuarioId=${user.id}`),
-      user.rol === 'ADMIN' ? apiRequest('/api/messages') : Promise.resolve(null),
+      user.rol === 'ADMIN' ? apiRequest('/api/messages') : Promise.resolve(messages),
     ])
-    if (user.rol === 'ADMIN') {
-      setUsers(remoteUsers)
-      setMessages(remoteMessages.map(message => ({
-        ...message,
-        fecha: message.fecha ? new Date(message.fecha).toLocaleDateString('es-CL') : '',
-      })))
-    }
+    if (user.rol === 'ADMIN') setUsers(remoteUsers)
     setOrders(remoteOrders.map(order => ({
       ...order,
       fecha: order.createdAt ? new Date(order.createdAt).toLocaleDateString('es-CL') : '',
     })))
+    if (user.rol === 'ADMIN') setMessages(remoteMessages.map(message => ({
+      ...message,
+      fecha: message.fecha ? new Date(message.fecha).toLocaleDateString('es-CL') : '',
+    })))
     setApiError('')
-  }, [setProducts, setUsers, setOrders, setMessages, setApiError])
+  }, [activeUser, users, messages, setProducts, setUsers, setOrders, setMessages])
 
   useEffect(() => {
     if (!apiEnabled) return
-    const token = localStorage.getItem('prostock_access_token')
-    const storedUser = token ? localStorage.getItem('usuarioActivo') : null
-    const sessionUser = storedUser ? JSON.parse(storedUser) : null
+    if (!localStorage.getItem('prostock_access_token')) setActiveUser(null)
     let active = true
-    refreshBackend(sessionUser)
+    apiRequest('/api/products')
+      .then(remoteProducts => {
+        if (active) setProducts(remoteProducts)
+      })
       .catch(error => {
+        console.error('No fue posible cargar datos desde los microservicios.', error)
         if (active) setApiError(`No fue posible conectar con el backend: ${error.message}`)
       })
       .finally(() => {
         if (active) setBackendReady(true)
       })
     return () => { active = false }
-  }, [refreshBackend, setApiError])
+  }, [setActiveUser, setProducts])
 
   useEffect(() => {
     if (!apiEnabled && !users.some(user => user.email === 'admin@duoc.cl')) {
@@ -112,10 +108,9 @@ function StoreProvider({ children }) {
   }, [users, setUsers])
   const value = useMemo(() => ({
     products, setProducts, cart, setCart, users, setUsers, orders, setOrders,
-    categories, setCategories, offers, setOffers,
     messages, setMessages, activeUser, setActiveUser, apiEnabled, apiError,
     setApiError, backendReady, refreshBackend,
-  }), [products, setProducts, cart, setCart, categories, setCategories, offers, setOffers, users, setUsers, orders, setOrders, messages, setMessages, activeUser, setActiveUser, apiError, setApiError, backendReady, refreshBackend])
+  }), [products, setProducts, cart, setCart, users, setUsers, orders, setOrders, messages, setMessages, activeUser, setActiveUser, apiError, setApiError, backendReady, refreshBackend])
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>
 }
@@ -132,8 +127,6 @@ function Header() {
   const links = [
     ['/', 'Inicio'],
     ['/productos', 'Productos'],
-    ['/categorias', 'Categorías'],
-    ['/ofertas', 'Ofertas'],
     ['/nosotros', 'Nosotros'],
     ['/blogs', 'Blog'],
     ['/contacto', 'Contacto'],
@@ -192,17 +185,13 @@ function SiteLayout() {
 }
 
 function BackendNotice() {
-  const { apiError, apiEnabled, backendReady } = useStore()
-  if (!apiEnabled) return null
-  if (!backendReady) return <div className="container mt-3"><div className="alert alert-info mb-0" role="status">Conectando con el catálogo de Prostock...</div></div>
-  if (apiError) return <div className="container mt-3"><div className="alert alert-danger mb-0" role="alert">{apiError}</div></div>
-  return null
+  const { apiError, apiEnabled } = useStore()
+  if (!apiEnabled || !apiError) return null
+  return <div className="container mt-3"><div className="alert alert-danger mb-0" role="alert">{apiError}</div></div>
 }
 
 function ProductCard({ product }) {
-  const { cart, setCart, offers, apiEnabled, backendReady, apiError } = useStore()
-  const offer = !apiEnabled && offers.find(item => item.active && item.categoria === product.categoria)
-  const price = offer ? Math.round(product.precio * (1 - offer.descuento / 100)) : product.precio
+  const { cart, setCart } = useStore()
   const addToCart = () => {
     const found = cart.find(item => item.id === product.id)
     if (found && found.cantidad >= product.stock) {
@@ -213,7 +202,7 @@ function ProductCard({ product }) {
       const item = current.find(entry => entry.id === product.id)
       return item
         ? current.map(entry => entry.id === product.id ? { ...entry, cantidad: entry.cantidad + 1 } : entry)
-        : [...current, { ...product, precio: price, precioOriginal: product.precio, oferta: offer?.titulo, cantidad: 1 }]
+        : [...current, { ...product, cantidad: 1 }]
     })
   }
 
@@ -227,9 +216,8 @@ function ProductCard({ product }) {
           <small className="text-muted fw-bold">CÓD: {product.codigo}</small>
           <h2 className="h6 fw-bold mt-2"><Link className="text-decoration-none text-dark" to={`/producto/${product.id}`}>{product.nombre}</Link></h2>
           <span className="text-muted small">{product.categoria}</span>
-          {offer && <span className="badge bg-danger align-self-start mt-2">{offer.descuento}% dcto. · {offer.titulo}</span>}
-          <strong className="text-primary mt-2">{money(withTax(price))} IVA incl.</strong>
-          <button className="btn btn-primary mt-auto mt-3" onClick={addToCart} disabled={product.stock <= 0 || (apiEnabled && (!backendReady || Boolean(apiError)))}>
+          <strong className="text-primary mt-2">{money(withTax(product.precio))} IVA incl.</strong>
+          <button className="btn btn-primary mt-auto mt-3" onClick={addToCart} disabled={product.stock <= 0}>
             <i className="bi bi-cart-plus me-1" />Agregar al carrito
           </button>
         </div>
@@ -306,58 +294,17 @@ function ProductsPage() {
   )
 }
 
-function CategoriesPage() {
-  const { products, categories: categoryRecords, apiEnabled } = useStore()
-  const categories = (apiEnabled
-    ? [...new Set(products.map(product => product.categoria))]
-    : categoryRecords.map(item => item.nombre)).sort()
-  return <main className="container my-5"><header className="text-center mb-4"><h1 className="display-5 fw-bold">Categorías</h1><p className="text-muted">Explora nuestros productos por categoría.</p></header>
-    <div className="row g-3">{categories.map(category => {
-      const count = products.filter(product => product.categoria === category).length
-      return <div className="col-sm-6 col-lg-3" key={category}><Link to={`/categorias/${encodeURIComponent(category)}`} className="home-category-card rounded h-100">
-        <span className="home-category-icon"><i className="bi bi-grid" /></span><span><strong>{category}</strong><small>{count} productos</small></span><i className="bi bi-arrow-right" />
-      </Link></div>
-    })}</div>
-  </main>
-}
-
-function CategoryDetailPage() {
-  const { category } = useParams()
-  const { products } = useStore()
-  const decodedCategory = decodeURIComponent(category)
-  const filtered = products.filter(product => product.categoria.toLowerCase() === decodedCategory.toLowerCase())
-  return <main className="container my-5"><div className="d-flex justify-content-between align-items-center mb-4"><div><Link to="/categorias" className="text-decoration-none"><i className="bi bi-arrow-left" /> Categorías</Link><h1 className="h2 mt-2">{decodedCategory}</h1></div></div>
-    <div className="row">{filtered.length ? filtered.map(product => <ProductCard key={product.id} product={product} />) : <p className="text-muted">No hay productos en esta categoría.</p>}</div>
-  </main>
-}
-
-function OffersPage() {
-  const { products, offers, apiEnabled } = useStore()
-  const activeOffers = apiEnabled ? [] : offers.filter(offer => offer.active)
-  const offeredProducts = products.map(product => ({
-    product,
-    offer: activeOffers.find(offer => offer.categoria === product.categoria),
-  })).filter(item => item.offer)
-  return <main className="container my-5"><header className="text-center mb-5"><span className="badge bg-danger mb-2">Precios especiales</span><h1 className="display-5 fw-bold">Ofertas</h1><p className="text-muted">Aprovecha los descuentos disponibles para tu oficina.</p></header>
-    {activeOffers.map(offer => <section className="mb-5" key={offer.id}><div className="p-4 rounded bg-light border mb-3"><span className="badge bg-danger mb-2">{offer.descuento}% de descuento</span><h2 className="h3">{offer.titulo}</h2><p className="mb-0">Categoría: {offer.categoria}</p></div>
-      <div className="row">{offeredProducts.filter(item => item.offer.id === offer.id).map(({ product }) => <ProductCard key={product.id} product={product} />)}</div>
-    </section>)}
-    {!activeOffers.length && <p className="text-center text-muted">{apiEnabled ? 'Las ofertas están disponibles en el modo de demostración; el backend actual no administra promociones.' : 'No hay ofertas disponibles en este momento.'}</p>}
-  </main>
-}
-
 function ProductDetailPage() {
   const { id } = useParams()
   const { products, cart, setCart, offers, apiEnabled, backendReady, apiError } = useStore()
   const product = products.find(item => String(item.id) === id)
   const [quantity, setQuantity] = useState(1)
+  const [imageSelection, setImageSelection] = useState({ productId: id, index: 0 })
   if (!product) return <main className="container my-5 text-center"><h1 className="h3">Producto no encontrado</h1><Link to="/productos" className="btn btn-primary mt-3">Volver al catálogo</Link></main>
   const images = product.imagenes?.length ? product.imagenes : [product.imagen]
-  const offer = !apiEnabled && offers.find(item => item.active && item.categoria === product.categoria)
-  const netPrice = offer ? Math.round(product.precio * (1 - offer.descuento / 100)) : product.precio
   const addToCart = () => {
-    const currentQuantity = cart.find(item => item.id === product.id)?.cantidad || 0
-    if (currentQuantity + quantity > product.stock) {
+    const cartProduct = getOfferCartProduct(product)
+    if (!addProductQuantityToCart(cart, cartProduct, quantity)) {
       window.alert(`Solo hay ${product.stock} unidades disponibles.`)
       return
     }
@@ -365,20 +312,39 @@ function ProductDetailPage() {
       const item = current.find(entry => entry.id === product.id)
       return item
         ? current.map(entry => entry.id === product.id ? { ...entry, cantidad: entry.cantidad + quantity } : entry)
-        : [...current, { ...product, precio: netPrice, precioOriginal: product.precio, oferta: offer?.titulo, cantidad: quantity }]
+        : [...current, { ...product, cantidad: quantity }]
     })
   }
   return <main className="container my-5"><div className="row bg-white p-4 rounded shadow-sm border">
     <div className="col-md-6 text-center">
-      <img src={images[0]} className="img-fluid product-detail-image" alt={product.nombre} />
-      {images.length > 1 && <div className="d-flex gap-2 justify-content-center mt-3">{images.map((image, index) => <img key={`${image}-${index}`} src={image} alt={`${product.nombre}, imagen ${index + 1}`} className="rounded border" style={{ width: 64, height: 64, objectFit: 'cover' }} />)}</div>}
+      <div className="product-carousel">
+        <ProductImage src={normalizedImages[activeImage]} className="img-fluid product-detail-image" alt={`${product.nombre}, imagen ${activeImage + 1}`} />
+        {normalizedImages.length > 1 && <div className="d-flex justify-content-between px-3 pb-2">
+          <button type="button" className="btn btn-outline-secondary btn-sm" onClick={() => changeImage(-1)} aria-label="Imagen anterior">
+            <i className="bi bi-chevron-left" /> Anterior
+          </button>
+          <button type="button" className="btn btn-outline-secondary btn-sm" onClick={() => changeImage(1)} aria-label="Imagen siguiente">
+            Siguiente <i className="bi bi-chevron-right" />
+          </button>
+        </div>}
+      </div>
+      {normalizedImages.length > 1 && <div className="d-flex gap-2 justify-content-center mt-3" aria-label="Seleccionar imagen del producto">
+        {normalizedImages.map((image, index) => <button
+          key={`${image}-${index}`}
+          type="button"
+          className={`p-0 rounded border${index === activeImage ? ' border-primary border-2' : ''}`}
+          onClick={() => setImageSelection({ productId: id, index })}
+          aria-label={`Mostrar imagen ${index + 1}`}
+          aria-pressed={index === activeImage}
+        >
+          <ProductImage src={image} alt="" className="rounded" style={{ width: 64, height: 64, objectFit: 'cover' }} />
+        </button>)}
+      </div>}
     </div>
     <div className="col-md-6 d-flex flex-column justify-content-center">
       <span className="badge bg-secondary mb-2 align-self-start">{product.categoria}</span>
       <h1 className="h2">{product.nombre}</h1><p className="text-muted">SKU / Código: <strong>{product.codigo}</strong></p>
-      {offer && <span className="badge bg-danger mb-2 align-self-start">{offer.descuento}% de descuento · {offer.titulo}</span>}
-      <h2 className="text-primary fw-bold my-3">{money(withTax(netPrice))}</h2>
-      {offer && <p className="text-muted"><del>{money(withTax(product.precio))}</del> precio anterior</p>}
+      <h2 className="text-primary fw-bold my-3">{money(withTax(product.precio))}</h2>
       <p className="text-muted small">Precio con IVA incluido</p><p>Stock disponible: <strong>{product.stock} unidades</strong></p>
       <div className="d-flex gap-2 mt-3">
         <input className="form-control" type="number" min="1" max={product.stock} value={quantity} onChange={event => setQuantity(Math.max(1, Number(event.target.value)))} aria-label="Cantidad" style={{ maxWidth: 90 }} />
@@ -390,10 +356,9 @@ function ProductDetailPage() {
 }
 
 function CartPage() {
-  const { cart, setCart, products, setProducts, activeUser, orders, setOrders, apiEnabled, apiRequest, refreshBackend, setApiError, backendReady, apiError } = useStore()
+  const { cart, setCart, products, setProducts, activeUser, orders, setOrders, apiEnabled, apiRequest, refreshBackend, setApiError } = useStore()
   const [checkout, setCheckout] = useState(false)
   const [notice, setNotice] = useState('')
-  const navigate = useNavigate()
   const [shipping, setShipping] = useState(() => ({
     nombre: activeUser?.nombre || '', telefono: activeUser?.telefono || '',
     direccion: activeUser?.direccion || '', comuna: activeUser?.comuna || '',
@@ -440,7 +405,10 @@ function CartPage() {
               cantidad: item.cantidad,
               precioNeto: item.precio,
             })),
-            despacho: shipping,
+            despacho: {
+              ...shipping,
+              observaciones: [shipping.observaciones, `Modalidad: ${deliveryMethod}`].filter(Boolean).join(' | '),
+            },
           }),
         })
         setOrders(current => [...current, {
@@ -449,12 +417,13 @@ function CartPage() {
         }])
         setCart([])
         setCheckout(false)
+        setNotice('¡Pedido confirmado! Puedes revisar el pedido en tu perfil.')
         refreshBackend(activeUser).catch(error => {
           setApiError(`El pedido se confirmó, pero no se pudo actualizar la vista: ${error.message}`)
         })
         navigate(`/compra/resultado?estado=exito&pedido=${order.id}`)
       } catch (error) {
-        navigate(`/compra/resultado?estado=error&motivo=${encodeURIComponent(error.message)}`)
+        setNotice(`No se pudo confirmar el pedido: ${error.message}`)
       }
       return
     }
@@ -464,13 +433,14 @@ function CartPage() {
     })
     const order = {
       id: createId(), usuarioId: activeUser.id, fecha: formatToday(),
-      subtotal, iva: total - subtotal, total, estado: 'Confirmado', items: cart, despacho: shipping,
+      subtotal, iva: total - subtotal, total, estado: 'Confirmado', items: cart,
+      despacho: { ...shipping, observaciones: [shipping.observaciones, `Modalidad: ${deliveryMethod}`].filter(Boolean).join(' | ') },
     }
     setProducts(updatedProducts)
     setOrders([...orders, order])
     setCart([])
     setCheckout(false)
-    navigate(`/compra/resultado?estado=exito&pedido=${order.id}`)
+    setNotice('¡Pedido confirmado! Puedes revisar el pedido en tu perfil.')
   }
   return <main className="container my-5">
     <h1 className="h2 mb-4"><i className="bi bi-cart3" /> Carrito de Compras</h1>
@@ -480,7 +450,7 @@ function CartPage() {
         <table className="table table-hover align-middle mb-0"><thead className="table-light"><tr><th>Producto</th><th>Precio</th><th>Cantidad</th><th>Subtotal</th><th>Acción</th></tr></thead>
           <tbody>{cart.length ? cart.map(item => <tr key={item.id}>
             <td><img src={item.imagen} width="50" height="50" className="rounded object-fit-cover me-2" alt="" /><span className="fw-bold">{item.nombre}</span></td>
-            <td>{money(withTax(item.precio))}</td><td><div className="input-group input-group-sm" style={{ width: 110 }}>
+            <td>{item.precioOriginal && item.precioOriginal > item.precio && <div className="small text-muted text-decoration-line-through">{money(withTax(item.precioOriginal))}</div>}{money(withTax(item.precio))}</td><td><div className="input-group input-group-sm" style={{ width: 110 }}>
               <button className="btn btn-outline-secondary" onClick={() => setQuantity(item.id, -1)} aria-label="Restar una unidad">-</button><span className="form-control text-center">{item.cantidad}</span>
               <button className="btn btn-outline-secondary" onClick={() => setQuantity(item.id, 1)} aria-label="Agregar una unidad">+</button></div></td>
             <td className="fw-bold">{money(withTax(item.precio) * item.cantidad)}</td>
@@ -505,6 +475,11 @@ function CartPage() {
     </div>
     {checkout && <section className="card mt-4"><div className="card-body"><h2 className="h4">Datos de despacho</h2>
       <form className="row g-3" onSubmit={checkoutOrder}>
+        <div className="col-12"><label className="form-label" htmlFor="delivery-method">Modalidad de entrega</label>
+          <select id="delivery-method" className="form-select" value={deliveryMethod} onChange={event => setDeliveryMethod(event.target.value)} required>
+            <option>Despacho estándar</option><option>Despacho programado</option>
+          </select>
+        </div>
         {['nombre', 'telefono', 'direccion', 'comuna', 'region'].map(field => <div className="col-md-6" key={field}>
           <label className="form-label" htmlFor={`shipping-${field}`}>{field[0].toUpperCase() + field.slice(1)}</label>
           <input id={`shipping-${field}`} className="form-control" required value={shipping[field]} onChange={event => setShipping({ ...shipping, [field]: event.target.value })} />
@@ -516,9 +491,49 @@ function CartPage() {
   </main>
 }
 
+function CheckoutResultPage({ success }) {
+  const { state } = useLocation()
+  const order = state?.order
+  if (!success) return <main className="container my-5">
+    <div className="alert alert-danger" role="alert"><h1 className="h3">No se pudo completar la compra</h1><p className="mb-0">{state?.message || 'Vuelve al carrito para intentar confirmar el pedido nuevamente.'}</p></div>
+    <Link className="btn btn-primary" to="/carrito">Volver al carrito</Link>
+  </main>
+  if (!order) return <main className="container my-5">
+    <div className="alert alert-success" role="status"><h1 className="h3">Compra confirmada</h1><p className="mb-0">Tu pedido fue registrado. Inicia sesión para revisar su detalle.</p></div>
+    <Link className="btn btn-primary" to="/perfil">Ver mi perfil</Link>
+  </main>
+  return <main className="container my-5">
+    <div className="alert alert-success" role="status"><h1 className="h3">¡Compra exitosa!</h1><p className="mb-0">Tu pedido #{order.id} fue confirmado.</p></div>
+    <section className="card shadow-sm border-0">
+      <div className="card-body"><h2 className="h5">Resumen de compra</h2>
+        <p className="mb-2">Fecha: {order.fecha || formatToday()}</p>
+        <p className="mb-3">Estado: {order.estado}</p>
+        <ul className="list-group list-group-flush mb-3">{order.items?.map((item, index) =>
+          <li className="list-group-item d-flex justify-content-between" key={item.id || item.productoId || index}>
+            <span>{item.nombre} × {item.cantidad}</span><span>{money(item.totalLinea || withTax(item.precio) * item.cantidad)}</span>
+          </li>)}
+        </ul>
+        <div className="d-flex justify-content-between fw-bold"><span>Total</span><span>{money(order.total)}</span></div>
+      </div>
+    </section>
+    <Link className="btn btn-primary mt-3" to="/productos">Seguir comprando</Link>
+  </main>
+}
+
 const blogPosts = [
-  { slug: 'inventario', title: '5 Tips para Organizar el Inventario de tu Oficina', category: 'Consejos', date: '12 de Mayo, 2026', image: 'https://images.unsplash.com/photo-1497215728101-856f4ea42174?w=900&q=80', summary: 'Aprende a gestionar el stock de papelería e insumos para evitar pérdidas y desabastecimiento.', paragraphs: ['Mantener un inventario ordenado ayuda a evitar compras de último minuto y a detectar los productos que más utiliza tu equipo.', 'Define un lugar para cada artículo, revisa las existencias periódicamente y registra cada entrada y salida.', 'Con una planificación sencilla puedes reducir desperdicios y asegurar que nunca falten los materiales esenciales.'] },
-  { slug: 'insumos', title: 'Cómo Elegir los Insumos Correctos para tu Empresa', category: 'Gestión', date: '3 de Junio, 2026', image: 'https://images.unsplash.com/photo-1556761175-b413da4baf72?w=900&q=80', summary: 'Conoce algunos criterios para comprar materiales de oficina de forma eficiente y cuidar el presupuesto.', paragraphs: ['Antes de comprar, identifica las necesidades reales de cada área y prioriza los productos de uso frecuente.', 'Compara calidad, rendimiento y costo total. Comprar en volumen puede ser conveniente cuando existe espacio para almacenar.', 'Revisar el consumo ayuda a presupuestar mejor y a elegir proveedores que respondan a tiempo.'] },
+  { slug: 'inventario', title: '5 Tips para Organizar el Inventario de tu Oficina', category: 'Consejos', date: '12 de Mayo, 2026', image: 'https://images.unsplash.com/photo-1497215728101-856f4ea42174?w=900&q=80', summary: 'Un inventario ordenado reduce quiebres de stock, compras urgentes y pérdidas de materiales. Estas prácticas permiten mantener el control sin complejidad.', sections: [
+    ['1. Clasifica los insumos', 'Ordena los productos según su frecuencia de uso y define responsables para los artículos críticos.'],
+    ['2. Registra entradas y salidas', 'Actualiza el inventario cada vez que recibas o entregues materiales. El registro oportuno evita diferencias con el stock físico.'],
+    ['3. Define un stock mínimo', 'Establece un límite de reposición por producto para anticipar las compras antes de quedarte sin unidades.'],
+    ['4. Asigna una ubicación', 'Etiqueta estantes y zonas de almacenamiento. Un lugar fijo facilita el recuento y reduce el tiempo de búsqueda.'],
+    ['5. Realiza revisiones periódicas', 'Contrasta el inventario registrado con el físico de forma mensual para detectar diferencias a tiempo.'],
+  ] },
+  { slug: 'insumos', title: 'Cómo Elegir los Insumos Correctos para tu Empresa', category: 'Gestión', date: '3 de Junio, 2026', image: 'https://images.unsplash.com/photo-1556761175-b413da4baf72?w=900&q=80', summary: 'Una compra bien planificada ayuda a mantener el trabajo diario sin exceder el presupuesto. Para elegir los insumos adecuados es importante considerar las necesidades reales de cada equipo.', sections: [
+    ['1. Identifica las necesidades del equipo', 'Revisa qué materiales se utilizan con mayor frecuencia y separa los insumos esenciales de aquellos que pueden comprarse de manera ocasional.'],
+    ['2. Compara calidad y duración', 'El precio más bajo no siempre representa el mejor ahorro. Prefiere productos confiables que reduzcan reemplazos y compras repetidas.'],
+    ['3. Planifica las compras', 'Define fechas de revisión y cantidades aproximadas para aprovechar mejor el presupuesto y evitar compras urgentes.'],
+    ['4. Mantén proveedores confiables', 'Trabajar con proveedores estables facilita la reposición y permite mantener una calidad constante en los materiales.'],
+  ] },
 ]
 
 function BlogPage() {
@@ -542,8 +557,8 @@ function BlogDetailPage() {
   return <main className="container my-5 flex-grow-1"><article className="mx-auto" style={{ maxWidth: 850 }}>
     <Link to="/blogs" className="text-decoration-none"><i className="bi bi-arrow-left" /> Volver al blog</Link>
     <h1 className="fw-bold my-3">{post.title}</h1><p className="text-muted"><span className="badge bg-primary me-2">{post.category}</span>{post.date}</p>
-    <img src={post.image} className="img-fluid rounded shadow-sm w-100 mb-4" alt={post.title} />
-    <p className="lead">{post.summary}</p>{post.paragraphs.map(paragraph => <p key={paragraph}>{paragraph}</p>)}
+    <img src={post.image} className="img-fluid rounded shadow-sm w-100 mb-4" alt={post.category === 'Consejos' ? 'Oficina organizada con insumos y papelería' : 'Equipo revisando la gestión de una oficina'} />
+    <p>{post.summary}</p>{post.sections.map(([heading, paragraph]) => <section key={heading}><h2 className="h4 mt-4">{heading}</h2><p>{paragraph}</p></section>)}
   </article></main>
 }
 
@@ -569,27 +584,45 @@ function AboutPage() {
 function ContactPage() {
   const { setMessages, activeUser, apiEnabled, apiRequest, setApiError } = useStore()
   const [notice, setNotice] = useState('')
+  const [noticeType, setNoticeType] = useState('success')
+  const [preparedEmailUrl, setPreparedEmailUrl] = useState('')
   const submit = async event => {
     event.preventDefault()
     const form = new FormData(event.currentTarget)
     const request = {
-      nombre: form.get('nombre'), email: form.get('email'),
-      asunto: form.get('asunto'), mensaje: form.get('mensaje'),
+      nombre: String(form.get('nombre')).trim(),
+      email: String(form.get('email')).trim().toLowerCase(),
+      asunto: String(form.get('asunto')).trim(),
+      mensaje: String(form.get('mensaje')).trim(),
     }
+    const cuerpo = [`Nombre: ${request.nombre}`, `Correo: ${request.email}`, '', request.mensaje].join('\n')
+    const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent('contacto@prostock.cl')}&su=${encodeURIComponent(request.asunto)}&body=${encodeURIComponent(cuerpo)}`
+    const gmailWindow = window.open('about:blank', '_blank')
+    if (gmailWindow) gmailWindow.opener = null
     try {
       const message = apiEnabled
         ? await apiRequest('/api/messages', { method: 'POST', body: JSON.stringify(request) })
         : { ...request, id: createId(), fecha: formatToday(), atendido: false }
       setMessages(current => [...current, message])
-      event.currentTarget.reset()
-      setNotice('Tu mensaje fue enviado correctamente.')
+      form.reset()
+      if (gmailWindow) gmailWindow.location.href = gmailUrl
+      setNoticeType('success')
+      setPreparedEmailUrl(gmailWindow ? '' : gmailUrl)
+      setNotice(apiEnabled
+        ? `El mensaje quedó registrado en el sistema. ${gmailWindow ? 'Gmail se abrió con el correo preparado; debes enviarlo desde allí.' : 'No se pudo abrir Gmail automáticamente.'}`
+        : `El mensaje quedó guardado localmente. ${gmailWindow ? 'Gmail se abrió con el correo preparado; debes enviarlo desde allí.' : 'No se pudo abrir Gmail automáticamente.'}`)
       setApiError('')
     } catch (error) {
+      gmailWindow?.close()
+      setPreparedEmailUrl('')
+      setNoticeType('danger')
       setNotice(`No se pudo enviar el mensaje: ${error.message}`)
     }
   }
   return <main className="container my-5"><h1 className="h2 mb-4 text-center">Formulario de Contacto</h1>
-    {notice && <div className="alert alert-success" role="status">{notice}</div>}
+    {notice && <div className={`alert alert-${noticeType}`} role={noticeType === 'danger' ? 'alert' : 'status'}>
+      {notice}{preparedEmailUrl && <> Puedes <a href={preparedEmailUrl} target="_blank" rel="noreferrer">abrir el correo preparado</a>.</>}
+    </div>}
     <div className="row g-4"><div className="col-md-7"><div className="card shadow-sm border-0 p-4">
       <form onSubmit={submit}>{[['nombre', 'Nombre Completo', 'text', activeUser?.nombre || 'Ej: Ana López'], ['email', 'Correo Electrónico', 'email', activeUser?.email || 'correo@ejemplo.com'], ['asunto', 'Asunto', 'text', 'Consulta sobre cotización / stock']].map(([name, label, type, placeholder]) => <div className="mb-3" key={name}><label className="form-label" htmlFor={`contact-${name}`}>{label}</label><input id={`contact-${name}`} name={name} type={type} className="form-control" required defaultValue={name === 'nombre' || name === 'email' ? placeholder : undefined} placeholder={name === 'asunto' ? placeholder : undefined} /></div>)}
         <div className="mb-3"><label className="form-label" htmlFor="contact-mensaje">Mensaje</label><textarea id="contact-mensaje" name="mensaje" className="form-control" rows="4" required placeholder="Escribe tu mensaje aquí..." /></div>
@@ -607,6 +640,7 @@ function ContactPage() {
 function LoginPage() {
   const { users, setActiveUser, apiEnabled, apiRequest, refreshBackend, setApiError } = useStore()
   const navigate = useNavigate()
+  const location = useLocation()
   const [error, setError] = useState('')
   const submit = async event => {
     event.preventDefault()
@@ -639,9 +673,10 @@ function LoginPage() {
         setApiError(`No se pudieron cargar los datos del usuario: ${requestError.message}`)
       }
     }
-    navigate(user.rol === 'ADMIN' ? '/admin' : '/perfil')
+    navigate(user.rol === 'ADMIN' ? '/admin' : '/')
   }
   return <AuthLayout title="Iniciar Sesión">
+    {location.state?.notice && <div className="alert alert-success" role="status">{location.state.notice}</div>}
     {error && <div className="alert alert-danger" role="alert">{error}</div>}
     <form onSubmit={submit}><div className="mb-3"><label className="form-label" htmlFor="login-email">Correo Electrónico</label><input id="login-email" name="email" type="email" className="form-control" required placeholder="correo@duoc.cl" /></div>
       <div className="mb-3"><label className="form-label" htmlFor="login-password">Contraseña</label><input id="login-password" name="password" type="password" className="form-control" required /></div>
@@ -652,13 +687,13 @@ function LoginPage() {
 }
 
 function AuthLayout({ title, children }) {
-  return <><nav className="navbar navbar-dark bg-dark mb-4"><div className="container"><Link className="navbar-brand" to="/"><img src="/img/logo-prostock.svg" className="brand-logo" alt="Prostock" /></Link></div></nav>
+  return <><nav className="navbar navbar-dark bg-dark mb-4"><div className="container"><Link className="navbar-brand" to="/"><BrandLogo className="brand-logo" /></Link></div></nav>
     <main className="container my-5 col-md-8 col-lg-5"><div className="card shadow-sm border-0"><div className="card-body p-4"><h1 className="h3 card-title text-center mb-4">{title}</h1>{children}</div></div></main>
   </>
 }
 
 function RegisterPage() {
-  const { users, setUsers, setActiveUser, apiEnabled, apiRequest, refreshBackend, setApiError } = useStore()
+  const { users, setUsers, apiEnabled, apiRequest } = useStore()
   const [error, setError] = useState('')
   const [region, setRegion] = useState('')
   const navigate = useNavigate()
@@ -685,29 +720,17 @@ function RegisterPage() {
       comuna: String(form.get('comuna')).trim(), direccion: String(form.get('direccion')).trim(),
       password, rol: 'CLIENTE',
     }
-    let user
     if (apiEnabled) {
       try {
-        const auth = await apiRequest('/api/auth/register', { method: 'POST', body: JSON.stringify(registration) })
-        localStorage.setItem('prostock_access_token', auth.token)
-        user = auth.user
+        await apiRequest('/api/auth/register', { method: 'POST', body: JSON.stringify(registration) })
       } catch (requestError) {
         setError(requestError.message)
         return
       }
     } else {
-      user = { ...registration, id: createId() }
-      setUsers([...users, user])
+      setUsers([...users, { ...registration, id: createId() }])
     }
-    setActiveUser(user)
-    if (apiEnabled) {
-      try {
-        await refreshBackend(user)
-      } catch (requestError) {
-        setApiError(`No se pudieron cargar los datos de la cuenta: ${requestError.message}`)
-      }
-    }
-    navigate('/perfil')
+    navigate('/login', { state: { notice: '¡Cuenta creada con éxito! Inicia sesión para continuar.' } })
   }
   return <AuthLayout title="Crear una Cuenta">
     {error && <div className="alert alert-danger" role="alert">{error}</div>}
@@ -751,54 +774,202 @@ function ProfilePage() {
   </main>
 }
 
-function CheckoutResultPage() {
-  const location = useLocation()
-  const params = new URLSearchParams(location.search)
-  const succeeded = params.get('estado') === 'exito'
-  const orderId = params.get('pedido')
-  const reason = params.get('motivo')
-  return <main className="container my-5"><div className={`card mx-auto shadow-sm border-0 text-center p-4 ${succeeded ? 'border-success' : 'border-danger'}`} style={{ maxWidth: 760 }}>
-    <i className={`bi ${succeeded ? 'bi-check-circle-fill text-success' : 'bi-x-circle-fill text-danger'}`} style={{ fontSize: '3rem' }} />
-    <h1 className="h2 mt-3">{succeeded ? '¡Compra exitosa!' : 'No se pudo realizar el pago'}</h1>
-    {succeeded ? <><p className="lead">Tu pedido #{orderId} fue registrado correctamente.</p><p>Revisa el detalle y el estado desde tu perfil.</p></> : <><p className="lead">{reason || 'Ocurrió un problema al procesar el pedido.'}</p><p>No se completó el cobro. Puedes revisar tu carrito e intentarlo nuevamente.</p></>}
-    <div className="d-flex flex-wrap gap-2 justify-content-center mt-3">
-      {succeeded ? <Link to={`/pedidos/${orderId}`} className="btn btn-success">Ver pedido</Link> : <Link to="/carrito" className="btn btn-danger">Volver a intentar</Link>}
-      <Link to="/productos" className="btn btn-outline-secondary">Seguir comprando</Link>
-    </div>
-  </div></main>
-}
-
-function OrderDetailPage() {
-  const { id } = useParams()
-  const { orders, activeUser } = useStore()
-  const order = orders.find(item => String(item.id) === id)
-  if (!order) return <main className="container my-5 text-center"><h1 className="h3">Pedido no encontrado</h1><Link to={activeUser?.rol === 'ADMIN' ? '/admin/pedidos' : '/perfil'}>Volver</Link></main>
-  if (!activeUser || (activeUser.rol !== 'ADMIN' && String(order.usuarioId) !== String(activeUser.id))) {
-    return <main className="container my-5 text-center"><h1 className="h3">No tienes permiso para ver este pedido.</h1><Link to="/login">Iniciar sesión</Link></main>
-  }
-  const items = order.items || []
-  return <main className="container my-5"><Link to={activeUser.rol === 'ADMIN' ? '/admin/pedidos' : '/perfil'} className="text-decoration-none"><i className="bi bi-arrow-left" /> Volver a pedidos</Link>
-    <div className="d-flex flex-wrap justify-content-between align-items-center mt-3 mb-4"><div><h1 className="h2">Pedido #{order.id}</h1><p className="text-muted mb-0">{order.fecha || (order.createdAt ? new Date(order.createdAt).toLocaleDateString('es-CL') : '')}</p></div><span className="badge bg-success fs-6">{order.estado || order.status}</span></div>
-    <div className="card border-0 shadow-sm mb-4"><div className="table-responsive"><table className="table table-hover align-middle mb-0"><thead className="table-light"><tr><th>Producto</th><th>Precio</th><th>Cantidad</th><th>Total</th></tr></thead><tbody>
-      {items.map((item, index) => <tr key={item.id || `${item.productoId || item.id}-${index}`}><td><img src={item.imagen} width="48" height="48" className="rounded object-fit-cover me-2" alt="" />{item.nombre || item.productName}</td><td>{money(withTax(item.precio ?? item.price))}</td><td>{item.cantidad ?? item.quantity}</td><td>{money((item.totalLinea ?? item.lineTotal) || withTax(item.precio ?? item.price) * (item.cantidad ?? item.quantity))}</td></tr>)}
-      {!items.length && <tr><td colSpan="4" className="text-center py-4">El pedido no tiene líneas.</td></tr>}
-    </tbody></table></div><div className="card-body text-end"><p className="mb-1">Subtotal neto: {money(order.subtotal)}</p><p className="mb-1">IVA: {money(order.iva)}</p><h2 className="h4">Total pagado: {money(order.total)}</h2></div></div>
-    {order.despacho && <div className="card border-0 shadow-sm"><div className="card-body"><h2 className="h5">Dirección de entrega</h2><p className="mb-1">{order.despacho.nombre}, {order.despacho.telefono}</p><p className="mb-1">{order.despacho.direccion}, {order.despacho.comuna}, {order.despacho.region}</p><p className="mb-0 text-muted">{order.despacho.observaciones}</p></div></div>}
-  </main>
-}
-
 function AdminLayout() {
   const { activeUser } = useStore()
   const location = useLocation()
   if (activeUser?.rol !== 'ADMIN') return <main className="container my-5 text-center"><h1 className="h3">Acceso restringido a administradores.</h1><Link className="btn btn-primary mt-3" to="/login">Iniciar sesión como administrador</Link></main>
-  const links = [
-    ['/admin', 'Dashboard'], ['/admin/productos', 'Productos'],
-    ['/admin/categorias', 'Categorías'], ['/admin/ofertas', 'Ofertas'],
-    ['/admin/pedidos', 'Pedidos'], ['/admin/reportes', 'Reportes'],
-    ['/admin/usuarios', 'Usuarios'], ['/admin/mensajes', 'Mensajes'],
-  ]
+  const links = [['/admin', 'Dashboard'], ['/admin/productos', 'Productos'], ['/admin/usuarios', 'Usuarios'], ['/admin/mensajes', 'Mensajes']]
   return <><nav className="navbar navbar-expand navbar-dark bg-dark"><div className="container-fluid"><Link className="navbar-brand" to="/admin"><img src="/img/logo-prostock.svg" className="brand-logo" alt="Prostock" /> <span className="admin-label">ADMIN</span></Link><Link to="/" className="btn btn-outline-light btn-sm">Volver a la Tienda</Link></div></nav><BackendNotice />
     <div className="container-fluid my-4"><div className="row"><aside className="col-md-3 col-lg-2 mb-3"><div className="list-group shadow-sm">{links.map(([to, label]) => <NavLink key={to} to={to} end={to === '/admin'} className={({ isActive }) => `list-group-item list-group-item-action${isActive || (to !== '/admin' && location.pathname.startsWith(to)) ? ' active' : ''}`}>{label}</NavLink>)}</div></aside><section className="col-md-9 col-lg-10"><Outlet /></section></div></div>
+  </>
+}
+
+function AdminCriticalProductsPage() {
+  const { products } = useStore()
+  const criticalProducts = getCriticalProducts(products)
+  return <>
+    <h1 className="h3 mb-2">Productos críticos</h1>
+    <p className="text-muted mb-3">Se consideran críticos los productos con stock igual o inferior a {CRITICAL_STOCK_THRESHOLD} unidades.</p>
+    <div className="card border-0 shadow-sm"><div className="table-responsive">
+      <table className="table table-hover align-middle mb-0">
+        <thead className="table-dark"><tr><th>Producto</th><th>Código</th><th>Categoría</th><th>Stock actual</th></tr></thead>
+        <tbody>
+          {criticalProducts.map(product => <tr key={product.id}>
+            <td>{product.nombre}</td><td>{product.codigo || 'No disponible'}</td>
+            <td>{product.categoria || 'Sin categoría'}</td><td><span className="badge bg-warning text-dark">{product.stock}</span></td>
+          </tr>)}
+          {!criticalProducts.length && <tr><td colSpan="4" className="text-center text-muted py-4">No hay productos críticos según el umbral de stock actual.</td></tr>}
+        </tbody>
+      </table>
+    </div></div>
+  </>
+}
+
+function AdminProductReportsPage() {
+  const { products, orders } = useStore()
+  const report = getProductReport(products, orders)
+  return <>
+    <h1 className="h3 mb-3">Reportes de productos</h1>
+    <div className="row g-3 mb-4">
+      <div className="col-md-4"><div className="card border-0 shadow-sm h-100"><div className="card-body"><h2 className="h6 text-muted">Productos registrados</h2><p className="h3 mb-0">{report.productCount}</p></div></div></div>
+      <div className="col-md-4"><div className="card border-0 shadow-sm h-100"><div className="card-body"><h2 className="h6 text-muted">Stock disponible</h2><p className="h3 mb-0">{report.availableStock} unidades</p></div></div></div>
+      <div className="col-md-4"><div className="card border-0 shadow-sm h-100"><div className="card-body"><h2 className="h6 text-muted">Productos críticos</h2><p className="h3 mb-0">{report.criticalProducts.length}</p><Link to="/admin/productos/criticos">Ver listado</Link></div></div></div>
+    </div>
+    <h2 className="h5">Productos por categoría</h2>
+    <div className="card border-0 shadow-sm mb-4"><div className="table-responsive">
+      <table className="table table-hover align-middle mb-0">
+        <thead className="table-dark"><tr><th>Categoría</th><th>Productos</th><th>Stock disponible</th></tr></thead>
+        <tbody>
+          {report.categories.map(category => <tr key={category.name}><td>{category.name}</td><td>{category.products}</td><td>{category.stock}</td></tr>)}
+          {!report.categories.length && <tr><td colSpan="3" className="text-center text-muted py-4">No hay productos para reportar.</td></tr>}
+        </tbody>
+      </table>
+    </div></div>
+    <h2 className="h5">Ventas por producto registradas en pedidos</h2>
+    <p className="text-muted">Los importes se calculan exclusivamente desde las líneas de pedidos existentes.</p>
+    <div className="card border-0 shadow-sm"><div className="table-responsive">
+      <table className="table table-hover align-middle mb-0">
+        <thead className="table-dark"><tr><th>Producto</th><th>Unidades vendidas</th><th>Total de líneas</th></tr></thead>
+        <tbody>
+          {report.salesByProduct.map(sale => <tr key={sale.key}><td>{sale.name}</td><td>{sale.units}</td><td>{money(sale.total)}</td></tr>)}
+          {!report.salesByProduct.length && <tr><td colSpan="3" className="text-center text-muted py-4">No hay líneas de pedidos para calcular ventas por producto.</td></tr>}
+        </tbody>
+      </table>
+    </div></div>
+  </>
+}
+
+function AdminGeneralReportsPage() {
+  const { products, users, orders, messages, categories } = useStore()
+  const report = getGeneralReport({ products, users, orders, messages, categories })
+  const stats = [
+    ['Productos', report.productCount, 'primary', 'box-seam'],
+    ['Usuarios', report.userCount, 'success', 'people'],
+    ['Pedidos', report.orderCount, 'info', 'bag-check'],
+    ['Ventas registradas', money(report.salesTotal), 'dark', 'cash-stack'],
+    ['Productos críticos', report.criticalProductCount, 'warning', 'exclamation-triangle'],
+    ['Categorías', report.categoryCount, 'secondary', 'tags'],
+    ['Mensajes registrados', report.messageCount, 'primary', 'envelope'],
+  ]
+  return <>
+    <h1 className="h3 mb-3">Reportes Generales</h1>
+    <div className="row g-3 mb-4">
+      {stats.map(([label, value, color, icon]) => <div className="col-md-6 col-xl-4" key={label}>
+        <div className={`card border-0 shadow-sm h-100 bg-${color} ${color === 'info' || color === 'warning' ? 'text-dark' : 'text-white'}`}>
+          <div className="card-body d-flex justify-content-between align-items-center">
+            <div><h2 className="h6 text-uppercase">{label}</h2><p className="h3 mb-0">{value}</p></div>
+            <i className={`bi bi-${icon} fs-2`} />
+          </div>
+        </div>
+      </div>)}
+    </div>
+    <h2 className="h5">Pedidos por estado</h2>
+    <div className="card border-0 shadow-sm mb-4"><div className="table-responsive">
+      <table className="table table-hover align-middle mb-0">
+        <thead className="table-dark"><tr><th>Estado</th><th>Pedidos</th></tr></thead>
+        <tbody>
+          {report.ordersByStatus.map(item => <tr key={item.status}><td>{item.status}</td><td>{item.count}</td></tr>)}
+          {!report.ordersByStatus.length && <tr><td colSpan="2" className="text-center text-muted py-4">No hay pedidos registrados.</td></tr>}
+        </tbody>
+      </table>
+    </div></div>
+    <h2 className="h5">Productos por categoría</h2>
+    <div className="card border-0 shadow-sm"><div className="table-responsive">
+      <table className="table table-hover align-middle mb-0">
+        <thead className="table-dark"><tr><th>Categoría</th><th>Productos</th><th>Stock disponible</th></tr></thead>
+        <tbody>
+          {report.productsByCategory.map(item => <tr key={item.name}><td>{item.name}</td><td>{item.products}</td><td>{item.stock}</td></tr>)}
+          {!report.productsByCategory.length && <tr><td colSpan="3" className="text-center text-muted py-4">No hay productos para resumir por categoría.</td></tr>}
+        </tbody>
+      </table>
+    </div></div>
+  </>
+}
+
+function AdminCategoriesPage() {
+  const { categories, setCategories, products } = useStore()
+  const [error, setError] = useState('')
+  const availableCategories = getAvailableCategories(categories, products)
+  const submit = event => {
+    event.preventDefault()
+    const form = new FormData(event.currentTarget)
+    const category = String(form.get('categoria') || '').trim()
+    if (!category) {
+      setError('Ingresa el nombre de la categoría.')
+      return
+    }
+    if (availableCategories.some(item => item.toLocaleLowerCase('es') === category.toLocaleLowerCase('es'))) {
+      setError('Esa categoría ya existe.')
+      return
+    }
+    setCategories(current => addCategory(current, category))
+    event.currentTarget.reset()
+    setError('')
+  }
+  return <>
+    <h1 className="h3 mb-3">Categorías</h1>
+    <div className="card border-0 shadow-sm mb-4"><div className="card-body">
+      <h2 className="h5">Nueva categoría</h2>
+      {error && <div className="alert alert-danger" role="alert">{error}</div>}
+      <form className="row g-2 align-items-end" onSubmit={submit}>
+        <div className="col-md-8"><label className="form-label" htmlFor="new-category">Nombre</label><input className="form-control" id="new-category" name="categoria" maxLength="80" required /></div>
+        <div className="col-md-4"><button className="btn btn-primary w-100">Crear categoría</button></div>
+      </form>
+    </div></div>
+    <h2 className="h5">Categorías disponibles</h2>
+    <div className="card border-0 shadow-sm"><ul className="list-group list-group-flush">
+      {availableCategories.map(category => <li className="list-group-item d-flex justify-content-between" key={category}>
+        <span>{category}</span><span className="text-muted">{products.filter(product => product.categoria === category).length} productos</span>
+      </li>)}
+      {!availableCategories.length && <li className="list-group-item text-muted">No hay categorías disponibles.</li>}
+    </ul></div>
+  </>
+}
+
+function AdminOrdersPage() {
+  const { orders, users } = useStore()
+  const sortedOrders = [...orders].sort((a, b) => {
+    const dateA = new Date(a.createdAt || a.fecha || 0).getTime()
+    const dateB = new Date(b.createdAt || b.fecha || 0).getTime()
+    return (Number.isNaN(dateB) ? 0 : dateB) - (Number.isNaN(dateA) ? 0 : dateA)
+  })
+
+  return <>
+    <h1 className="h3 mb-3">Órdenes y Boletas</h1>
+    <div className="card border-0 shadow-sm"><div className="table-responsive">
+      <table className="table table-hover align-middle mb-0">
+        <thead className="table-dark"><tr><th>Pedido</th><th>Cliente</th><th>Fecha</th><th>Estado</th><th>Total</th><th>Detalle</th></tr></thead>
+        <tbody>
+          {sortedOrders.map(order => {
+            const customer = users.find(user => String(user.id) === String(order.usuarioId))
+            return <tr key={order.id}>
+              <td>#{order.id}</td>
+              <td>{customer?.nombre || `Usuario #${order.usuarioId}`}</td>
+              <td>{order.fecha || (order.createdAt ? new Date(order.createdAt).toLocaleDateString('es-CL') : 'No disponible')}</td>
+              <td><span className="badge bg-success">{order.estado || 'No disponible'}</span></td>
+              <td>{money(order.total)}</td>
+              <td><Link className="btn btn-sm btn-outline-primary" to={`/admin/pedidos/${order.id}`}>Ver pedido</Link></td>
+            </tr>
+          })}
+          {!sortedOrders.length && <tr><td colSpan="6" className="text-center text-muted py-4">No hay pedidos registrados.</td></tr>}
+        </tbody>
+      </table>
+    </div></div>
+  </>
+}
+
+function AdminOrderDetailPage() {
+  const { id } = useParams()
+  const { orders, users } = useStore()
+  const order = orders.find(item => String(item.id) === id)
+  if (!order) return <><h1 className="h3">Pedido no encontrado.</h1><Link to="/admin/pedidos">Volver a órdenes y boletas</Link></>
+  const customer = users.find(user => String(user.id) === String(order.usuarioId))
+  return <>
+    <div className="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+      <div><h1 className="h3 mb-1">Detalle del pedido #{order.id}</h1><p className="text-muted mb-0">Resumen del pedido con los datos disponibles.</p></div>
+      <Link to="/admin/pedidos" className="btn btn-outline-secondary">Volver a órdenes</Link>
+    </div>
+    <OrderDetails order={order} customer={customer} />
   </>
 }
 
@@ -818,13 +989,13 @@ function AdminDashboard() {
 }
 
 function AdminProductsPage() {
-  const { products, setProducts, apiEnabled, apiRequest } = useStore()
+  const { products, setProducts, apiEnabled } = useStore()
   const sorted = [...products].sort((a, b) => Number(a.id) - Number(b.id))
   const remove = async id => {
     if (!window.confirm('¿Seguro de eliminar este producto?')) return
     try {
-      if (apiEnabled) await apiRequest(`/api/products/${id}`, { method: 'DELETE' })
-      setProducts(current => current.filter(product => product.id !== id))
+      if (apiEnabled) await removeCatalogProduct(id)
+      setProducts(current => deleteProduct(current, id))
     } catch (error) {
       window.alert(`No se pudo eliminar el producto: ${error.message}`)
     }
@@ -999,9 +1170,10 @@ function AdminReportsPage() {
 
 function AdminProductForm() {
   const { id } = useParams()
-  const { products, setProducts, apiEnabled, apiRequest } = useStore()
+  const { products, categories, setProducts, apiEnabled } = useStore()
   const navigate = useNavigate()
   const product = products.find(item => String(item.id) === id)
+  const availableCategories = getAvailableCategories(categories, products)
   const [error, setError] = useState('')
   const submit = async event => {
     event.preventDefault()
@@ -1024,20 +1196,19 @@ function AdminProductForm() {
     const next = { ...payload, id: product?.id || createId() }
     if (apiEnabled) {
       try {
-        const saved = await apiRequest(product ? `/api/products/${product.id}` : '/api/products', {
-          method: product ? 'PUT' : 'POST',
-          body: JSON.stringify(payload),
-        })
+        const saved = await saveCatalogProduct(payload, product?.id)
         setProducts(current => product
-          ? current.map(item => item.id === product.id ? saved : item)
-          : [...current, saved])
+          ? updateProduct(current, product.id, saved)
+          : createProduct(current, saved))
         navigate('/admin/productos')
       } catch (requestError) {
         setError(requestError.message)
       }
       return
     }
-    setProducts(product ? products.map(item => item.id === product.id ? next : item) : [...products, next])
+    setProducts(product
+      ? updateProduct(products, product.id, next)
+      : createProduct(products, next))
     navigate('/admin/productos')
   }
   if (id && !product) return <><h1 className="h3">Producto no encontrado.</h1><Link to="/admin/productos">Volver a productos</Link></>
@@ -1046,7 +1217,10 @@ function AdminProductForm() {
     <form onSubmit={submit}>
       <Field name="codigo" label="Código" defaultValue={product?.codigo} />
       <Field name="nombre" label="Nombre" defaultValue={product?.nombre} />
-      <Field name="categoria" label="Categoría" defaultValue={product?.categoria} />
+      <div className="mb-3"><label className="form-label" htmlFor="product-category">Categoría</label><select id="product-category" name="categoria" className="form-select" required defaultValue={product?.categoria || ''}>
+        <option value="">Seleccione...</option>
+        {availableCategories.map(category => <option key={category} value={category}>{category}</option>)}
+      </select></div>
       <div className="row"><div className="col-md-6"><Field name="precio" label="Precio neto" type="number" min="1" defaultValue={product?.precio} /></div><div className="col-md-6"><Field name="stock" label="Stock" type="number" min="0" defaultValue={product?.stock} /></div></div>
       <div className="mb-3"><label className="form-label" htmlFor="product-images">Imágenes (una URL por línea)</label><textarea className="form-control" id="product-images" name="imagenes" required rows="3" defaultValue={product?.imagenes?.join('\n') || product?.imagen || ''} /></div>
       <div className="d-flex justify-content-between"><Link to="/admin/productos" className="btn btn-outline-secondary">Cancelar</Link><button className="btn btn-success">Guardar Producto</button></div>
@@ -1071,8 +1245,41 @@ function AdminUsersPage() {
   }
   return <><div className="d-flex justify-content-between align-items-center mb-3"><h1 className="h3">Gestión de Usuarios</h1><Link to="/admin/usuarios/nuevo" className="btn btn-primary">+ Nuevo Usuario</Link></div>
     <div className="card border-0 shadow-sm"><div className="table-responsive"><table className="table table-hover align-middle mb-0"><thead className="table-dark"><tr><th>Nombre</th><th>Correo</th><th>Rol</th><th>Acciones</th></tr></thead><tbody>
-      {users.map(user => <tr key={user.id}><td>{user.nombre}</td><td>{user.email}</td><td><span className={`badge ${user.rol === 'ADMIN' ? 'bg-danger' : 'bg-secondary'}`}>{user.rol}</span></td><td><Link to={`/admin/usuarios/${user.id}`} className="btn btn-sm btn-warning me-1" aria-label={`Editar ${user.nombre}`}><i className="bi bi-pencil" /></Link><button className="btn btn-sm btn-danger" onClick={() => remove(user.id)} aria-label={`Eliminar ${user.nombre}`}><i className="bi bi-trash" /></button></td></tr>)}
+      {users.map(user => <tr key={user.id}><td>{user.nombre}</td><td>{user.email}</td><td><span className={`badge ${user.rol === 'ADMIN' ? 'bg-danger' : 'bg-secondary'}`}>{user.rol}</span></td><td className="text-nowrap"><Link to={`/admin/usuarios/${user.id}/compras`} className="btn btn-sm btn-outline-primary me-1">Compras</Link><Link to={`/admin/usuarios/${user.id}`} className="btn btn-sm btn-warning me-1" aria-label={`Editar ${user.nombre}`}><i className="bi bi-pencil" /></Link><button className="btn btn-sm btn-danger" onClick={() => remove(user.id)} aria-label={`Eliminar ${user.nombre}`}><i className="bi bi-trash" /></button></td></tr>)}
     </tbody></table></div></div>
+  </>
+}
+
+function AdminUserPurchaseHistory() {
+  const { id } = useParams()
+  const { users, orders } = useStore()
+  const user = users.find(item => String(item.id) === id)
+  if (!user) return <><h1 className="h3">Usuario no encontrado.</h1><Link to="/admin/usuarios">Volver a usuarios</Link></>
+  const userOrders = orders
+    .filter(order => String(order.usuarioId) === String(user.id))
+    .sort((a, b) => new Date(b.createdAt || b.fecha || 0).getTime() - new Date(a.createdAt || a.fecha || 0).getTime())
+
+  return <>
+    <div className="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+      <div><h1 className="h3 mb-1">Historial de compras</h1><p className="text-muted mb-0">{user.nombre} · {user.email}</p></div>
+      <Link to="/admin/usuarios" className="btn btn-outline-secondary">Volver a usuarios</Link>
+    </div>
+    <div className="card border-0 shadow-sm"><div className="table-responsive">
+      <table className="table table-hover align-middle mb-0">
+        <thead className="table-dark"><tr><th>Pedido</th><th>Fecha</th><th>Estado</th><th>Productos</th><th>Total</th><th>Detalle</th></tr></thead>
+        <tbody>
+          {userOrders.map(order => <tr key={order.id}>
+            <td>#{order.id}</td>
+            <td>{order.fecha || (order.createdAt ? new Date(order.createdAt).toLocaleDateString('es-CL') : 'No disponible')}</td>
+            <td><span className="badge bg-success">{order.estado || 'No disponible'}</span></td>
+            <td>{order.items?.length || 0}</td>
+            <td>{money(order.total)}</td>
+            <td><Link className="btn btn-sm btn-outline-primary" to={`/admin/pedidos/${order.id}`}>Ver pedido</Link></td>
+          </tr>)}
+          {!userOrders.length && <tr><td colSpan="6" className="text-center text-muted py-4">Este usuario no tiene compras registradas.</td></tr>}
+        </tbody>
+      </table>
+    </div></div>
   </>
 }
 
@@ -1198,7 +1405,7 @@ function LegacyPathRedirects() {
     '/blogs.html': '/blogs', '/contacto.html': '/contacto', '/login.html': '/login',
     '/registro.html': '/registro', '/perfil.html': '/perfil',
     '/detalle-producto.html': `/producto/${new URLSearchParams(location.search).get('id') || ''}`,
-    '/detalle-blog.html': '/blogs/inventario', '/detalle-blog-2.html': '/blogs/insumos',
+    '/detalle-blog.html': '/blogs/insumos', '/detalle-blog-2.html': '/blogs/inventario',
     '/admin/index.html': '/admin', '/admin/productos-listar.html': '/admin/productos',
     '/admin/producto-form.html': `/admin/productos/${new URLSearchParams(location.search).get('id') || 'nuevo'}`,
     '/admin/usuarios-listar.html': '/admin/usuarios',
@@ -1214,13 +1421,10 @@ export default function App() {
     <Route element={<SiteLayout />}>
       <Route index element={<HomePage />} />
       <Route path="productos" element={<ProductsPage />} />
+      <Route path="categorias" element={<CategoriesPage />} />
+      <Route path="ofertas" element={<OffersPage />} />
       <Route path="producto/:id" element={<ProductDetailPage />} />
       <Route path="carrito" element={<CartPage />} />
-      <Route path="compra/resultado" element={<CheckoutResultPage />} />
-      <Route path="pedidos/:id" element={<OrderDetailPage />} />
-      <Route path="categorias" element={<CategoriesPage />} />
-      <Route path="categorias/:category" element={<CategoryDetailPage />} />
-      <Route path="ofertas" element={<OffersPage />} />
       <Route path="nosotros" element={<AboutPage />} />
       <Route path="blogs" element={<BlogPage />} />
       <Route path="blogs/:slug" element={<BlogDetailPage />} />
@@ -1231,7 +1435,13 @@ export default function App() {
     <Route path="registro" element={<RegisterPage />} />
     <Route path="admin" element={<AdminLayout />}>
       <Route index element={<AdminDashboard />} />
+      <Route path="pedidos" element={<AdminOrdersPage />} />
+      <Route path="pedidos/:id" element={<AdminOrderDetailPage />} />
+      <Route path="categorias" element={<AdminCategoriesPage />} />
+      <Route path="reportes" element={<AdminGeneralReportsPage />} />
       <Route path="productos" element={<AdminProductsPage />} />
+      <Route path="productos/criticos" element={<AdminCriticalProductsPage />} />
+      <Route path="productos/reportes" element={<AdminProductReportsPage />} />
       <Route path="productos/nuevo" element={<AdminProductForm />} />
       <Route path="productos/:id" element={<AdminProductForm />} />
       <Route path="categorias" element={<AdminCategoriesPage />} />
@@ -1244,6 +1454,7 @@ export default function App() {
       <Route path="reportes" element={<AdminReportsPage />} />
       <Route path="usuarios" element={<AdminUsersPage />} />
       <Route path="usuarios/nuevo" element={<AdminUserForm />} />
+      <Route path="usuarios/:id/compras" element={<AdminUserPurchaseHistory />} />
       <Route path="usuarios/:id" element={<AdminUserForm />} />
       <Route path="mensajes" element={<AdminMessagesPage />} />
     </Route>
