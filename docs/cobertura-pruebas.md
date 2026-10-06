@@ -21,13 +21,27 @@ sola corrida. No requiere instalar Chrome ni otro navegador.
 | Componente React | Renderizado y props | El texto inicial refleja la propiedad recibida. |
 | Componente React | Estado y evento | El clic incrementa el estado y actualiza el DOM. |
 
+## Pruebas backend
+
+Desde `backend/`, ejecutar:
+
+```sh
+mvn test
+```
+
+La suite verifica las reglas de autorización del gateway y el bloqueo de
+endpoints internos de stock; las reservas y liberaciones de inventario en H2;
+y la autorización, validación de precios del catálogo y compensación de stock
+ante fallos de persistencia en pedidos. Estas pruebas usan dobles locales y no
+requieren Docker ni PostgreSQL.
+
 ## Análisis
 
-Las pruebas cubren repositorios y lógica de datos usados por la aplicación
-activa, y algunos flujos de interfaz de administración. El build de Vite
-verifica además el ensamblado de rutas y componentes. Los flujos de integración
-con PostgreSQL requieren Java 17 y Docker Compose y deben ejecutarse en un
-entorno que disponga de esas herramientas.
+Las pruebas frontend cubren repositorios y lógica de datos usados por la
+aplicación activa, y algunos flujos de interfaz de administración. El build de
+Vite verifica además el ensamblado de rutas y componentes. Los tests backend
+no reemplazan pruebas end-to-end con PostgreSQL y servicios levantados con
+Docker Compose.
 
 ## Limitaciones
 

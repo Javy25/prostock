@@ -50,6 +50,16 @@ Each service owns a separate database. Order items retain product snapshots;
 IDs that refer to users and products are logical cross-service references,
 not foreign keys shared between databases.
 
+Run the backend tests from `backend/` with:
+
+```sh
+mvn test
+```
+
+The gateway authorization tests use a local stub service, catalog stock tests
+use an in-memory H2 database, and order API tests use mocked persistence and
+catalog responses. These tests do not require Docker or PostgreSQL.
+
 1. Copy `backend/.env.example` to `backend/.env` and replace the database,
    administrator, and JWT example values. Keep the JWT secret the same for the
    gateway, identity, and order services; Compose passes the configured value
