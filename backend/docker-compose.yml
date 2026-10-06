@@ -2,11 +2,9 @@ services:
   postgres:
     image: postgres:16-alpine
     environment:
-      POSTGRES_USER: ${DATABASE_USER:-prostock}
-      POSTGRES_PASSWORD: ${DATABASE_PASSWORD:-prostock}
+      POSTGRES_USER: ${DATABASE_USER:?Set DATABASE_USER in backend/.env}
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD:?Set DATABASE_PASSWORD in backend/.env}
       POSTGRES_DB: postgres
-    ports:
-      - "5432:5432"
     volumes:
       - prostock-postgres:/var/lib/postgresql/data
       - ./infrastructure/init-databases.sql:/docker-entrypoint-initdb.d/01-init-databases.sql:ro
@@ -22,8 +20,8 @@ services:
       dockerfile: catalog-service/Dockerfile
     environment:
       DATABASE_URL: jdbc:postgresql://postgres:5432/prostock_catalog
-      DATABASE_USER: ${DATABASE_USER:-prostock}
-      DATABASE_PASSWORD: ${DATABASE_PASSWORD:-prostock}
+      DATABASE_USER: ${DATABASE_USER:?Set DATABASE_USER in backend/.env}
+      DATABASE_PASSWORD: ${DATABASE_PASSWORD:?Set DATABASE_PASSWORD in backend/.env}
     depends_on:
       postgres:
         condition: service_healthy
@@ -34,11 +32,11 @@ services:
       dockerfile: identity-service/Dockerfile
     environment:
       DATABASE_URL: jdbc:postgresql://postgres:5432/prostock_identity
-      DATABASE_USER: ${DATABASE_USER:-prostock}
-      DATABASE_PASSWORD: ${DATABASE_PASSWORD:-prostock}
+      DATABASE_USER: ${DATABASE_USER:?Set DATABASE_USER in backend/.env}
+      DATABASE_PASSWORD: ${DATABASE_PASSWORD:?Set DATABASE_PASSWORD in backend/.env}
       JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in backend/.env}
       ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@duoc.cl}
-      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-admin123}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?Set ADMIN_PASSWORD in backend/.env}
       ADMIN_NAME: ${ADMIN_NAME:-Administrador Prostock}
     depends_on:
       postgres:
@@ -50,8 +48,8 @@ services:
       dockerfile: order-service/Dockerfile
     environment:
       DATABASE_URL: jdbc:postgresql://postgres:5432/prostock_orders
-      DATABASE_USER: ${DATABASE_USER:-prostock}
-      DATABASE_PASSWORD: ${DATABASE_PASSWORD:-prostock}
+      DATABASE_USER: ${DATABASE_USER:?Set DATABASE_USER in backend/.env}
+      DATABASE_PASSWORD: ${DATABASE_PASSWORD:?Set DATABASE_PASSWORD in backend/.env}
       CATALOG_SERVICE_URL: http://catalog-service:8081
       JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in backend/.env}
     depends_on:
@@ -66,8 +64,8 @@ services:
       dockerfile: contact-service/Dockerfile
     environment:
       DATABASE_URL: jdbc:postgresql://postgres:5432/prostock_contact
-      DATABASE_USER: ${DATABASE_USER:-prostock}
-      DATABASE_PASSWORD: ${DATABASE_PASSWORD:-prostock}
+      DATABASE_USER: ${DATABASE_USER:?Set DATABASE_USER in backend/.env}
+      DATABASE_PASSWORD: ${DATABASE_PASSWORD:?Set DATABASE_PASSWORD in backend/.env}
     depends_on:
       postgres:
         condition: service_healthy

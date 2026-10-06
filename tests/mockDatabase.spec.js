@@ -1,6 +1,5 @@
-import React, { useState } from 'react'
+import React, { act, useState } from 'react'
 import { createRoot } from 'react-dom/client'
-import { flushSync } from 'react-dom'
 import { Field } from '../src/App.jsx'
 import { createRepository } from '../src/data/mockDatabase.js'
 
@@ -44,7 +43,7 @@ describe('renderizado e interacciones React', () => {
   })
 
   afterEach(() => {
-    root.unmount()
+    act(() => root.unmount())
     container.remove()
   })
 
@@ -54,15 +53,15 @@ describe('renderizado e interacciones React', () => {
       return React.createElement('button', { onClick: () => setCount(value => value + 1) }, `${label}: ${count}`)
     }
 
-    flushSync(() => root.render(React.createElement(Counter, { label: 'Unidades' })))
+    act(() => root.render(React.createElement(Counter, { label: 'Unidades' })))
     const button = container.querySelector('button')
     expect(button.textContent).toBe('Unidades: 0')
-    flushSync(() => button.dispatchEvent(new MouseEvent('click', { bubbles: true })))
+    act(() => button.dispatchEvent(new MouseEvent('click', { bubbles: true })))
     expect(button.textContent).toBe('Unidades: 1')
   })
 
   it('renderiza el componente de formulario con las props recibidas', () => {
-    flushSync(() => root.render(React.createElement(Field, {
+    act(() => root.render(React.createElement(Field, {
       name: 'email',
       label: 'Correo electrónico',
       type: 'email',

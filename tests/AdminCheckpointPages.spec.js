@@ -139,7 +139,10 @@ describe('vistas administrativas de pedidos, categorías y reportes generales', 
 
   it('crea una categoría persistente y la ofrece al crear un producto', () => {
     const page = renderAt('/admin/categorias')
-    const input = page.querySelector('#new-category')
+    const createLink = page.querySelector('a[href="/admin/categorias/nueva"]')
+
+    act(() => createLink.click())
+    const input = container.querySelector('#field-nombre')
     const form = input.closest('form')
 
     act(() => {
@@ -148,7 +151,7 @@ describe('vistas administrativas de pedidos, categorías y reportes generales', 
     })
 
     expect(page.textContent).toContain('Tecnología')
-    expect(JSON.parse(localStorage.getItem('categorias_db'))).toContain('Tecnología')
+    expect(JSON.parse(localStorage.getItem('categorias_db')).some(category => category.nombre === 'Tecnología')).toBeTrue()
 
     act(() => {
       window.history.pushState({}, '', '/admin/productos/nuevo')

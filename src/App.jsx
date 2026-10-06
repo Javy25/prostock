@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import {
   BrowserRouter,
   Link,
@@ -12,15 +12,28 @@ import {
   useParams,
 } from 'react-router-dom'
 import regions from '../data/regiones.json'
+import productsSeed from '../data/productos.json'
 import { apiEnabled, apiRequest } from './api.js'
+import { createProduct, deleteProduct, updateProduct } from './data/productRepository.js'
+import { getAvailableCategories } from './data/categoryRepository.js'
+import { addProductQuantityToCart } from './data/cart.js'
+import { getOfferCartProduct, getOfferProducts } from './data/offers.js'
+import { CRITICAL_STOCK_THRESHOLD, getCriticalProducts, getProductReport } from './data/productReports.js'
+import { getGeneralReport } from './data/generalReports.js'
+import { mockDatabase } from './data/mockDatabase.js'
+import { removeCatalogProduct, saveCatalogProduct } from './services/catalogApi.js'
+import BrandLogo from './components/BrandLogo.jsx'
+import ProductImage from './components/ProductImage.jsx'
 
 const StoreContext = createContext(null)
 const money = value => `$${Number(value || 0).toLocaleString('es-CL')}`
 const withTax = value => Math.round(Number(value) * 1.19)
 const createId = () => Date.now()
 const formatToday = () => new Date().toLocaleDateString('es-CL')
+const identity = value => value
 const pageTitles = {
-  '/': 'Inicio', '/productos': 'Catálogo de Productos', '/carrito': 'Carrito de Compras',
+  '/': 'Inicio', '/productos': 'Catálogo de Productos', '/categorias': 'Categorías',
+  '/ofertas': 'Ofertas', '/carrito': 'Carrito de Compras',
   '/nosotros': 'Nosotros', '/blogs': 'Blog y Noticias', '/contacto': 'Contacto',
   '/login': 'Iniciar Sesión', '/registro': 'Crear una Cuenta', '/perfil': 'Mi Perfil',
 }
@@ -33,20 +46,35 @@ const readStored = (key, fallback) => {
   return JSON.parse(stored)
 }
 
-function useStoredValue(key, fallback) {
-  const [value, setValue] = useState(() => readStored(key, fallback))
+function useStoredValue(key, fallback, normalize = identity) {
+  const [value, setValue] = useState(() => {
+    const stored = readStored(key, fallback)
+    const normalized = normalize(stored)
+    if (normalized !== stored) localStorage.setItem(key, JSON.stringify(normalized))
+    return normalized
+  })
   const update = useCallback(nextValue => {
     setValue(current => {
-      const resolved = typeof nextValue === 'function' ? nextValue(current) : nextValue
-      localStorage.setItem(key, JSON.stringify(resolved))
-      return resolved
+      const next = typeof nextValue === 'function' ? nextValue(current) : nextValue
+      const normalized = normalize(next)
+      localStorage.setItem(key, JSON.stringify(normalized))
+      return normalized
     })
-  }, [key])
+  }, [key, normalize])
   return [value, update]
+}
+
+function normalizeCategories(categories) {
+  if (!Array.isArray(categories)) return []
+  return categories.map((category, index) => typeof category === 'string'
+    ? { id: index + 1, nombre: category }
+    : category).filter(category => category?.nombre)
 }
 
 function StoreProvider({ children }) {
   const [products, setProducts] = useStoredValue('productos_db', productsSeed)
+  const [categories, setCategories] = useStoredValue('categorias_db', mockDatabase.categories.list(), normalizeCategories)
+  const [offers, setOffers] = useStoredValue('ofertas_db', mockDatabase.offers.list())
   const [cart, setCart] = useStoredValue('carrito', [])
   const [users, setUsers] = useStoredValue('usuarios_db', [
     { id: 999, nombre: 'Administrador Prostock', email: 'admin@duoc.cl', password: 'admin123', rol: 'ADMIN' },
@@ -107,10 +135,10 @@ function StoreProvider({ children }) {
     }
   }, [users, setUsers])
   const value = useMemo(() => ({
-    products, setProducts, cart, setCart, users, setUsers, orders, setOrders,
+    products, setProducts, categories, setCategories, offers, setOffers, cart, setCart, users, setUsers, orders, setOrders,
     messages, setMessages, activeUser, setActiveUser, apiEnabled, apiError,
     setApiError, backendReady, refreshBackend,
-  }), [products, setProducts, cart, setCart, users, setUsers, orders, setOrders, messages, setMessages, activeUser, setActiveUser, apiError, setApiError, backendReady, refreshBackend])
+  }), [products, setProducts, categories, setCategories, offers, setOffers, cart, setCart, users, setUsers, orders, setOrders, messages, setMessages, activeUser, setActiveUser, apiError, setApiError, backendReady, refreshBackend])
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>
 }
@@ -294,6 +322,39 @@ function ProductsPage() {
   )
 }
 
+function CategoriesPage() {
+  const { products } = useStore()
+  const categories = [...new Set(products.map(product => product.categoria).filter(Boolean))]
+    .sort((left, right) => left.localeCompare(right, 'es'))
+
+  return <main className="container my-5">
+    <h1 className="h2 mb-4">Categorías</h1>
+    <div className="row g-3">
+      {categories.map(category => <div className="col-sm-6 col-lg-4" key={category}>
+        <Link className="card h-100 text-decoration-none shadow-sm" to={`/productos?categoria=${encodeURIComponent(category)}`}>
+          <div className="card-body">
+            <h2 className="h5 text-dark">{category}</h2>
+            <p className="text-muted mb-0">{products.filter(product => product.categoria === category).length} productos</p>
+          </div>
+        </Link>
+      </div>)}
+      {!categories.length && <p className="text-muted">No hay categorías disponibles.</p>}
+    </div>
+  </main>
+}
+
+function OffersPage() {
+  const { products } = useStore()
+  const offers = getOfferProducts(products)
+
+  return <main className="container my-5">
+    <h1 className="h2 mb-4">Ofertas</h1>
+    {offers.length
+      ? <div className="row">{offers.map(product => <ProductCard key={product.id} product={product} />)}</div>
+      : <div className="alert alert-info" role="status">No hay ofertas vigentes en este momento.</div>}
+  </main>
+}
+
 function ProductDetailPage() {
   const { id } = useParams()
   const { products, cart, setCart, offers, apiEnabled, backendReady, apiError } = useStore()
@@ -302,18 +363,21 @@ function ProductDetailPage() {
   const [imageSelection, setImageSelection] = useState({ productId: id, index: 0 })
   if (!product) return <main className="container my-5 text-center"><h1 className="h3">Producto no encontrado</h1><Link to="/productos" className="btn btn-primary mt-3">Volver al catálogo</Link></main>
   const images = product.imagenes?.length ? product.imagenes : [product.imagen]
+  const normalizedImages = images.map(image => image || '/img/product-placeholder.svg')
+  const activeImage = imageSelection.productId === id
+    ? Math.min(imageSelection.index, normalizedImages.length - 1)
+    : 0
+  const changeImage = direction => setImageSelection({
+    productId: id,
+    index: (activeImage + direction + normalizedImages.length) % normalizedImages.length,
+  })
   const addToCart = () => {
     const cartProduct = getOfferCartProduct(product)
     if (!addProductQuantityToCart(cart, cartProduct, quantity)) {
       window.alert(`Solo hay ${product.stock} unidades disponibles.`)
       return
     }
-    setCart(current => {
-      const item = current.find(entry => entry.id === product.id)
-      return item
-        ? current.map(entry => entry.id === product.id ? { ...entry, cantidad: entry.cantidad + quantity } : entry)
-        : [...current, { ...product, cantidad: quantity }]
-    })
+    setCart(current => addProductQuantityToCart(current, cartProduct, quantity) || current)
   }
   return <main className="container my-5"><div className="row bg-white p-4 rounded shadow-sm border">
     <div className="col-md-6 text-center">
@@ -778,7 +842,16 @@ function AdminLayout() {
   const { activeUser } = useStore()
   const location = useLocation()
   if (activeUser?.rol !== 'ADMIN') return <main className="container my-5 text-center"><h1 className="h3">Acceso restringido a administradores.</h1><Link className="btn btn-primary mt-3" to="/login">Iniciar sesión como administrador</Link></main>
-  const links = [['/admin', 'Dashboard'], ['/admin/productos', 'Productos'], ['/admin/usuarios', 'Usuarios'], ['/admin/mensajes', 'Mensajes']]
+  const links = [
+    ['/admin', 'Dashboard'],
+    ['/admin/productos', 'Productos'],
+    ['/admin/categorias', 'Categorías'],
+    ['/admin/ofertas', 'Ofertas'],
+    ['/admin/pedidos', 'Pedidos'],
+    ['/admin/reportes', 'Reportes'],
+    ['/admin/usuarios', 'Usuarios'],
+    ['/admin/mensajes', 'Mensajes'],
+  ]
   return <><nav className="navbar navbar-expand navbar-dark bg-dark"><div className="container-fluid"><Link className="navbar-brand" to="/admin"><img src="/img/logo-prostock.svg" className="brand-logo" alt="Prostock" /> <span className="admin-label">ADMIN</span></Link><Link to="/" className="btn btn-outline-light btn-sm">Volver a la Tienda</Link></div></nav><BackendNotice />
     <div className="container-fluid my-4"><div className="row"><aside className="col-md-3 col-lg-2 mb-3"><div className="list-group shadow-sm">{links.map(([to, label]) => <NavLink key={to} to={to} end={to === '/admin'} className={({ isActive }) => `list-group-item list-group-item-action${isActive || (to !== '/admin' && location.pathname.startsWith(to)) ? ' active' : ''}`}>{label}</NavLink>)}</div></aside><section className="col-md-9 col-lg-10"><Outlet /></section></div></div>
   </>
@@ -839,93 +912,6 @@ function AdminProductReportsPage() {
   </>
 }
 
-function AdminGeneralReportsPage() {
-  const { products, users, orders, messages, categories } = useStore()
-  const report = getGeneralReport({ products, users, orders, messages, categories })
-  const stats = [
-    ['Productos', report.productCount, 'primary', 'box-seam'],
-    ['Usuarios', report.userCount, 'success', 'people'],
-    ['Pedidos', report.orderCount, 'info', 'bag-check'],
-    ['Ventas registradas', money(report.salesTotal), 'dark', 'cash-stack'],
-    ['Productos críticos', report.criticalProductCount, 'warning', 'exclamation-triangle'],
-    ['Categorías', report.categoryCount, 'secondary', 'tags'],
-    ['Mensajes registrados', report.messageCount, 'primary', 'envelope'],
-  ]
-  return <>
-    <h1 className="h3 mb-3">Reportes Generales</h1>
-    <div className="row g-3 mb-4">
-      {stats.map(([label, value, color, icon]) => <div className="col-md-6 col-xl-4" key={label}>
-        <div className={`card border-0 shadow-sm h-100 bg-${color} ${color === 'info' || color === 'warning' ? 'text-dark' : 'text-white'}`}>
-          <div className="card-body d-flex justify-content-between align-items-center">
-            <div><h2 className="h6 text-uppercase">{label}</h2><p className="h3 mb-0">{value}</p></div>
-            <i className={`bi bi-${icon} fs-2`} />
-          </div>
-        </div>
-      </div>)}
-    </div>
-    <h2 className="h5">Pedidos por estado</h2>
-    <div className="card border-0 shadow-sm mb-4"><div className="table-responsive">
-      <table className="table table-hover align-middle mb-0">
-        <thead className="table-dark"><tr><th>Estado</th><th>Pedidos</th></tr></thead>
-        <tbody>
-          {report.ordersByStatus.map(item => <tr key={item.status}><td>{item.status}</td><td>{item.count}</td></tr>)}
-          {!report.ordersByStatus.length && <tr><td colSpan="2" className="text-center text-muted py-4">No hay pedidos registrados.</td></tr>}
-        </tbody>
-      </table>
-    </div></div>
-    <h2 className="h5">Productos por categoría</h2>
-    <div className="card border-0 shadow-sm"><div className="table-responsive">
-      <table className="table table-hover align-middle mb-0">
-        <thead className="table-dark"><tr><th>Categoría</th><th>Productos</th><th>Stock disponible</th></tr></thead>
-        <tbody>
-          {report.productsByCategory.map(item => <tr key={item.name}><td>{item.name}</td><td>{item.products}</td><td>{item.stock}</td></tr>)}
-          {!report.productsByCategory.length && <tr><td colSpan="3" className="text-center text-muted py-4">No hay productos para resumir por categoría.</td></tr>}
-        </tbody>
-      </table>
-    </div></div>
-  </>
-}
-
-function AdminCategoriesPage() {
-  const { categories, setCategories, products } = useStore()
-  const [error, setError] = useState('')
-  const availableCategories = getAvailableCategories(categories, products)
-  const submit = event => {
-    event.preventDefault()
-    const form = new FormData(event.currentTarget)
-    const category = String(form.get('categoria') || '').trim()
-    if (!category) {
-      setError('Ingresa el nombre de la categoría.')
-      return
-    }
-    if (availableCategories.some(item => item.toLocaleLowerCase('es') === category.toLocaleLowerCase('es'))) {
-      setError('Esa categoría ya existe.')
-      return
-    }
-    setCategories(current => addCategory(current, category))
-    event.currentTarget.reset()
-    setError('')
-  }
-  return <>
-    <h1 className="h3 mb-3">Categorías</h1>
-    <div className="card border-0 shadow-sm mb-4"><div className="card-body">
-      <h2 className="h5">Nueva categoría</h2>
-      {error && <div className="alert alert-danger" role="alert">{error}</div>}
-      <form className="row g-2 align-items-end" onSubmit={submit}>
-        <div className="col-md-8"><label className="form-label" htmlFor="new-category">Nombre</label><input className="form-control" id="new-category" name="categoria" maxLength="80" required /></div>
-        <div className="col-md-4"><button className="btn btn-primary w-100">Crear categoría</button></div>
-      </form>
-    </div></div>
-    <h2 className="h5">Categorías disponibles</h2>
-    <div className="card border-0 shadow-sm"><ul className="list-group list-group-flush">
-      {availableCategories.map(category => <li className="list-group-item d-flex justify-content-between" key={category}>
-        <span>{category}</span><span className="text-muted">{products.filter(product => product.categoria === category).length} productos</span>
-      </li>)}
-      {!availableCategories.length && <li className="list-group-item text-muted">No hay categorías disponibles.</li>}
-    </ul></div>
-  </>
-}
-
 function AdminOrdersPage() {
   const { orders, users } = useStore()
   const sortedOrders = [...orders].sort((a, b) => {
@@ -971,6 +957,39 @@ function AdminOrderDetailPage() {
     </div>
     <OrderDetails order={order} customer={customer} />
   </>
+}
+
+function OrderDetails({ order, customer }) {
+  const shipping = order.despacho || {}
+  const address = [shipping.direccion, shipping.comuna, shipping.region].filter(Boolean).join(', ')
+  return <section className="card border-0 shadow-sm">
+    <div className="card-body">
+      <h2 className="h5">Datos del cliente</h2>
+      <p className="mb-1">{customer?.nombre || shipping.nombre || `Usuario #${order.usuarioId}`}</p>
+      {shipping.telefono && <p className="mb-1">Teléfono: {shipping.telefono}</p>}
+      {address && <p className="mb-4">Dirección: {address}</p>}
+      <h2 className="h5">Productos</h2>
+      <div className="table-responsive"><table className="table table-hover align-middle">
+        <thead><tr><th>Producto</th><th>Código</th><th>Cantidad</th><th>Precio unitario</th><th>Total</th></tr></thead>
+        <tbody>
+          {(order.items || []).map((item, index) => <tr key={item.id || item.productoId || index}>
+            <td>{item.nombre || 'Producto sin nombre'}</td>
+            <td>{item.codigo || '—'}</td>
+            <td>{item.cantidad}</td>
+            <td>{money(item.precioConIva ?? withTax(item.precio))}</td>
+            <td>{money(item.totalLinea ?? withTax(item.precio) * item.cantidad)}</td>
+          </tr>)}
+          {!order.items?.length && <tr><td colSpan="5" className="text-center text-muted">El pedido no contiene productos.</td></tr>}
+        </tbody>
+      </table></div>
+      {shipping.observaciones && <p><strong>Observaciones:</strong> {shipping.observaciones}</p>}
+      <div className="ms-auto" style={{ maxWidth: 320 }}>
+        <div className="d-flex justify-content-between"><span>Subtotal</span><span>{money(order.subtotal)}</span></div>
+        <div className="d-flex justify-content-between"><span>IVA</span><span>{money(order.iva)}</span></div>
+        <div className="d-flex justify-content-between fw-bold fs-5"><span>Total</span><span>{money(order.total)}</span></div>
+      </div>
+    </div>
+  </section>
 }
 
 function AdminDashboard() {
@@ -1041,6 +1060,7 @@ function AdminCategoryForm() {
   const navigate = useNavigate()
   const current = categories.find(category => String(category.id) === id)
   const [error, setError] = useState('')
+  if (apiEnabled) return <div className="alert alert-info" role="status">La administración de categorías está disponible solo en el modo de demostración; el backend no expone un servicio CRUD de categorías.</div>
   const submit = event => {
     event.preventDefault()
     const name = new FormData(event.currentTarget).get('nombre').trim()
@@ -1048,7 +1068,6 @@ function AdminCategoryForm() {
       setError('Ya existe una categoría con ese nombre.')
       return
     }
-    if (apiEnabled) return <div className="alert alert-info" role="status">La administración de categorías está disponible en el modo de demostración; no se guardan cambios en los microservicios.</div>
     try {
       const saved = current
         ? mockDatabase.categories.update(current.id, { nombre: name })
@@ -1099,6 +1118,7 @@ function AdminOfferForm() {
   const navigate = useNavigate()
   const current = offers.find(offer => String(offer.id) === id)
   const [error, setError] = useState('')
+  if (apiEnabled) return <div className="alert alert-info" role="status">La gestión de ofertas está disponible únicamente en el modo de demostración.</div>
   const submit = event => {
     event.preventDefault()
     const form = new FormData(event.currentTarget)
@@ -1108,7 +1128,6 @@ function AdminOfferForm() {
       descuento: Number(form.get('descuento')),
       active: form.get('active') === 'true',
     }
-    if (apiEnabled) return <div className="alert alert-info" role="status">La gestión de ofertas está disponible únicamente en el modo de demostración.</div>
     if (!payload.categoria || payload.descuento < 1 || payload.descuento > 90) {
       setError('Selecciona una categoría e ingresa un descuento entre 1 y 90%.')
       return
@@ -1138,33 +1157,47 @@ function AdminOfferForm() {
   </div></div>
 }
 
-function AdminOrdersPage() {
-  const { orders } = useStore()
-  const sorted = [...orders].sort((left, right) => Number(right.id) - Number(left.id))
-  return <><h1 className="h3 mb-3">Historial de compras</h1><div className="card border-0 shadow-sm"><div className="table-responsive"><table className="table table-hover align-middle mb-0"><thead className="table-dark"><tr><th>N.º pedido</th><th>Usuario</th><th>Fecha</th><th>Productos</th><th>Total</th><th>Estado</th><th>Detalle</th></tr></thead><tbody>
-    {sorted.map(order => <tr key={order.id}><td>#{order.id}</td><td>{order.usuarioId}</td><td>{order.fecha || (order.createdAt ? new Date(order.createdAt).toLocaleDateString('es-CL') : '')}</td><td>{order.items?.length || 0}</td><td>{money(order.total)}</td><td><span className="badge bg-success">{order.estado || order.status}</span></td><td><Link className="btn btn-sm btn-outline-primary" to={`/pedidos/${order.id}`}>Ver pedido</Link></td></tr>)}
-    {!sorted.length && <tr><td colSpan="7" className="text-center py-4">Todavía no hay compras registradas.</td></tr>}
-  </tbody></table></div></div>
-  </>
-}
-
 function AdminReportsPage() {
-  const { products, orders, users, messages } = useStore()
-  const revenue = orders.reduce((sum, order) => sum + Number(order.total || 0), 0)
-  const unitsSold = orders.reduce((sum, order) => sum + (order.items || []).reduce((lineSum, item) => lineSum + Number(item.cantidad ?? item.quantity ?? 0), 0), 0)
-  const lowStock = products.filter(product => Number(product.stock) <= 5)
-  return <><h1 className="h3 mb-4">Reportes</h1><div className="row g-3 mb-4">
-    {[
-      ['Ventas totales', money(revenue), 'success'],
-      ['Pedidos procesados', orders.length, 'primary'],
-      ['Unidades vendidas', unitsSold, 'info'],
-      ['Usuarios registrados', users.length, 'secondary'],
-      ['Mensajes pendientes', messages.filter(message => !message.atendido).length, 'warning'],
-    ].map(([label, value, color]) => <div className="col-sm-6 col-xl-4" key={label}><div className={`card border-0 shadow-sm bg-${color} ${color === 'warning' || color === 'info' ? 'text-dark' : 'text-white'} p-3`}><h2 className="h6">{label}</h2><p className="h3 mb-0">{value}</p></div></div>)}
-  </div><h2 className="h4">Alertas de inventario bajo</h2><div className="card border-0 shadow-sm"><div className="table-responsive"><table className="table table-hover mb-0"><thead className="table-light"><tr><th>Código</th><th>Producto</th><th>Stock disponible</th></tr></thead><tbody>
-    {lowStock.map(product => <tr key={product.id}><td>{product.codigo}</td><td>{product.nombre}</td><td><span className="badge bg-warning text-dark">{product.stock}</span></td></tr>)}
-    {!lowStock.length && <tr><td colSpan="3" className="text-center py-4">No hay productos con stock crítico.</td></tr>}
-  </tbody></table></div></div>
+  const { products, orders, users, messages, categories } = useStore()
+  const report = getGeneralReport({ products, users, orders, messages, categories })
+  const stats = [
+    ['Productos', report.productCount, 'primary'],
+    ['Usuarios', report.userCount, 'success'],
+    ['Pedidos', report.orderCount, 'info'],
+    ['Ventas registradas', money(report.salesTotal), 'dark'],
+    ['Productos críticos', report.criticalProductCount, 'warning'],
+    ['Categorías', report.categoryCount, 'secondary'],
+    ['Mensajes registrados', report.messageCount, 'primary'],
+  ]
+  return <>
+    <h1 className="h3 mb-3">Reportes Generales</h1>
+    <div className="row g-3 mb-4">
+      {stats.map(([label, value, color]) => <div className="col-md-6 col-xl-4" key={label}>
+        <div className={`card border-0 shadow-sm h-100 bg-${color} ${color === 'info' || color === 'warning' ? 'text-dark' : 'text-white'} p-3`}>
+          <h2 className="h6 text-uppercase">{label}</h2><p className="h3 mb-0">{value}</p>
+        </div>
+      </div>)}
+    </div>
+    <h2 className="h5">Pedidos por estado</h2>
+    <div className="card border-0 shadow-sm mb-4"><div className="table-responsive">
+      <table className="table table-hover align-middle mb-0">
+        <thead className="table-dark"><tr><th>Estado</th><th>Pedidos</th></tr></thead>
+        <tbody>
+          {report.ordersByStatus.map(item => <tr key={item.status}><td>{item.status}</td><td>{item.count}</td></tr>)}
+          {!report.ordersByStatus.length && <tr><td colSpan="2" className="text-center text-muted py-4">No hay pedidos registrados.</td></tr>}
+        </tbody>
+      </table>
+    </div></div>
+    <h2 className="h5">Productos por categoría</h2>
+    <div className="card border-0 shadow-sm"><div className="table-responsive">
+      <table className="table table-hover align-middle mb-0">
+        <thead className="table-dark"><tr><th>Categoría</th><th>Productos</th><th>Stock disponible</th></tr></thead>
+        <tbody>
+          {report.productsByCategory.map(item => <tr key={item.name}><td>{item.name}</td><td>{item.products}</td><td>{item.stock}</td></tr>)}
+          {!report.productsByCategory.length && <tr><td colSpan="3" className="text-center text-muted py-4">No hay productos para resumir por categoría.</td></tr>}
+        </tbody>
+      </table>
+    </div></div>
   </>
 }
 
@@ -1437,8 +1470,6 @@ export default function App() {
       <Route index element={<AdminDashboard />} />
       <Route path="pedidos" element={<AdminOrdersPage />} />
       <Route path="pedidos/:id" element={<AdminOrderDetailPage />} />
-      <Route path="categorias" element={<AdminCategoriesPage />} />
-      <Route path="reportes" element={<AdminGeneralReportsPage />} />
       <Route path="productos" element={<AdminProductsPage />} />
       <Route path="productos/criticos" element={<AdminCriticalProductsPage />} />
       <Route path="productos/reportes" element={<AdminProductReportsPage />} />
@@ -1450,7 +1481,6 @@ export default function App() {
       <Route path="ofertas" element={<AdminOffersPage />} />
       <Route path="ofertas/nueva" element={<AdminOfferForm />} />
       <Route path="ofertas/:id" element={<AdminOfferForm />} />
-      <Route path="pedidos" element={<AdminOrdersPage />} />
       <Route path="reportes" element={<AdminReportsPage />} />
       <Route path="usuarios" element={<AdminUsersPage />} />
       <Route path="usuarios/nuevo" element={<AdminUserForm />} />

@@ -8,8 +8,8 @@ Desde la raíz del proyecto:
 npm test
 ```
 
-El comando inicia Karma en su entorno jsdom y ejecuta las especificaciones
-Jasmine en una sola corrida.
+El comando inicia Karma con jsdom y ejecuta las especificaciones Jasmine en una
+sola corrida. No requiere instalar Chrome ni otro navegador.
 
 ## Casos cubiertos
 
@@ -23,15 +23,15 @@ Jasmine en una sola corrida.
 
 ## Análisis
 
-Las pruebas comprueban operaciones CRUD y la integración básica de props,
-estado y eventos React. El build de Vite verifica además el ensamblado de todas
-las rutas y componentes. Los flujos de integración con PostgreSQL requieren
-Java 17 y Docker Compose y deben ejecutarse en un entorno que disponga de esas
-herramientas.
+Las pruebas cubren repositorios y lógica de datos usados por la aplicación
+activa, y algunos flujos de interfaz de administración. El build de Vite
+verifica además el ensamblado de rutas y componentes. Los flujos de integración
+con PostgreSQL requieren Java 17 y Docker Compose y deben ejecutarse en un
+entorno que disponga de esas herramientas.
 
 ## Limitaciones
 
-La configuración actual no genera porcentaje de cobertura instrumentado. Los
-casos no sustituyen pruebas de integración del gateway, autorización,
-transacciones de pedidos ni pruebas manuales responsive. Para la entrega se
-debe adjuntar el resultado de `npm test` y el de `npm run build`.
+La configuración no genera porcentaje de cobertura instrumentado. Los casos
+no sustituyen pruebas de integración del gateway, autorización, transacciones
+de pedidos ni pruebas manuales responsive. Para la entrega se debe adjuntar el
+resultado de `npm test` y el de `npm run build`.

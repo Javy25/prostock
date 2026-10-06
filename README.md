@@ -19,12 +19,15 @@ categories, offers, checkout results, order history, accounts, and the
 administration panel. The default demo uses JavaScript CRUD repositories backed
 by `localStorage`.
 
-Run the Jasmine/Karma tests and production build with:
+Run the Jasmine/Karma tests in jsdom and the production build with:
 
 ```sh
 npm test
 npm run build
 ```
+
+The test command runs without a browser installation. Use `npm run test:watch`
+for continuous testing during development.
 
 The updated requirements specification is in [docs/ERS-V2.md](./docs/ERS-V2.md),
 and the test cases and current coverage limitations are in
@@ -67,8 +70,10 @@ The gateway is the only application service published to the host. The
 identity, catalogue, order, and contact services communicate on Docker's
 private network. The sample administrator email defaults to `admin@duoc.cl`; use the password
 set in `backend/.env`.
-Only the gateway is exposed on port `8080`; do not publish internal service
-ports or use the demo environment defaults on a public network.
+Only the gateway is exposed on port `8080`; PostgreSQL and the domain services
+remain on Docker's private network. Compose requires explicit database and
+administrator passwords from `backend/.env`. Do not use the example values on a
+public network.
 
 ## API routes through the gateway
 
