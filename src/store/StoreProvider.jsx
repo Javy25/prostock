@@ -5,14 +5,30 @@ import { readCategories } from '../data/categoryRepository.js'
 import { listCatalogProducts } from '../services/catalogApi.js'
 import { StoreContext } from './StoreContext.jsx'
 
+const safeWriteStorage = (key, value) => {
+  try {
+    localStorage.setItem(key, JSON.stringify(value))
+    return true
+  } catch (error) {
+    console.warn(`No se pudo guardar ${key} en localStorage.`, error)
+    return false
+  }
+}
+
 const readStored = (key, fallback, persist) => {
   if (!persist) return fallback
-  const stored = localStorage.getItem(key)
-  if (stored === null) {
-    localStorage.setItem(key, JSON.stringify(fallback))
+  try {
+    const stored = localStorage.getItem(key)
+    if (stored === null) {
+      safeWriteStorage(key, fallback)
+      return fallback
+    }
+    return JSON.parse(stored)
+  } catch (error) {
+    console.warn(`Los datos guardados en ${key} estaban corruptos y se restauraron al valor inicial.`, error)
+    safeWriteStorage(key, fallback)
     return fallback
   }
-  return JSON.parse(stored)
 }
 
 function useStoredValue(key, fallback, persist, initialize = () => readStored(key, fallback, persist)) {
@@ -20,7 +36,7 @@ function useStoredValue(key, fallback, persist, initialize = () => readStored(ke
   const update = useCallback(nextValue => {
     setValue(current => {
       const resolved = typeof nextValue === 'function' ? nextValue(current) : nextValue
-      if (persist) localStorage.setItem(key, JSON.stringify(resolved))
+      if (persist) safeWriteStorage(key, resolved)
       return resolved
     })
   }, [key, persist])
@@ -32,7 +48,7 @@ export default function StoreProvider({ children }) {
     const storedProducts = readStored('productos_db', apiEnabled ? [] : readProducts(), !apiEnabled)
     if (apiEnabled) return storedProducts
     const productsWithOffers = applySeedOffers(storedProducts)
-    if (productsWithOffers !== storedProducts) localStorage.setItem('productos_db', JSON.stringify(productsWithOffers))
+    if (productsWithOffers !== storedProducts) safeWriteStorage('productos_db', productsWithOffers)
     return productsWithOffers
   })
   const [categories, setCategories] = useStoredValue('categorias_db', readCategories(), true)

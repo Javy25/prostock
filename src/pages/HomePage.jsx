@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import ProductCard from '../components/ProductCard.jsx'
+import ProductImage from '../components/ProductImage.jsx'
 import { useStore } from '../store/StoreContext.jsx'
 import { money, withTax } from '../utils/storeFormatters.js'
 
@@ -86,7 +87,7 @@ export default function HomePage() {
             {sponsoredProducts.map(product => (
               <article className="sponsored-card" key={product.id}>
                 <Link to={`/producto/${product.id}`} className="sponsored-image-link">
-                  <img src={product.imagen} alt={product.nombre} />
+                  <ProductImage src={product.imagen} alt={product.nombre} />
                 </Link>
                 <div className="sponsored-card-body">
                   <span className="sponsored-category">{product.categoria}</span>

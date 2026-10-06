@@ -24,6 +24,9 @@ import { getGeneralReport } from './data/generalReports.js'
 import { addProductQuantityToCart } from './data/cart.js'
 import { removeCatalogProduct, saveCatalogProduct } from './services/catalogApi.js'
 import { createId, formatToday, money, withTax } from './utils/storeFormatters.js'
+import ProductImage from './components/ProductImage.jsx'
+import BrandLogo from './components/BrandLogo.jsx'
+import { BackendNotice, SiteLayout } from './components/SiteShell.jsx'
 
 const pageTitles = {
   '/': 'Inicio', '/productos': 'Catálogo de Productos', '/categorias': 'Categorías',
@@ -31,76 +34,6 @@ const pageTitles = {
   '/compra/confirmada': 'Compra exitosa', '/compra/error': 'Compra no completada',
   '/nosotros': 'Nosotros', '/blogs': 'Blog y Noticias', '/contacto': 'Contacto',
   '/login': 'Iniciar Sesión', '/registro': 'Crear una Cuenta', '/perfil': 'Mi Perfil',
-}
-function Header() {
-  const { cart, activeUser, setActiveUser } = useStore()
-  const count = cart.reduce((total, item) => total + item.cantidad, 0)
-  const links = [
-    ['/', 'Inicio'],
-    ['/productos', 'Productos'],
-    ['/categorias', 'Categorías'],
-    ['/ofertas', 'Ofertas'],
-    ['/nosotros', 'Nosotros'],
-    ['/blogs', 'Blog'],
-    ['/contacto', 'Contacto'],
-  ]
-
-  return (
-    <nav className="navbar navbar-expand-lg navbar-dark bg-dark sticky-top shadow-sm">
-      <div className="container">
-        <Link className="navbar-brand" to="/">
-          <img src="/img/logo-prostock.svg" className="brand-logo" alt="Prostock" />
-        </Link>
-        <button className="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Abrir navegación">
-          <span className="navbar-toggler-icon" />
-        </button>
-        <div className="collapse navbar-collapse" id="navbarNav">
-          <ul className="navbar-nav me-auto mb-2 mb-lg-0">
-            {links.map(([to, label]) => (
-              <li className="nav-item" key={to}>
-                <NavLink className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`} to={to} end={to === '/'}>
-                  {label}
-                </NavLink>
-              </li>
-            ))}
-          </ul>
-          <div className="d-flex align-items-center gap-3">
-            <Link to="/carrito" className="btn btn-outline-light position-relative" aria-label="Carrito de compras">
-              <i className="bi bi-cart3" />
-              <span className="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">{count}</span>
-            </Link>
-            {activeUser ? (
-              <div className="text-white small d-flex align-items-center gap-2">
-                <Link className="text-white text-decoration-none" to="/perfil">{activeUser.nombre}</Link>
-                <button className="btn btn-sm btn-outline-light" onClick={() => {
-                  localStorage.removeItem('prostock_access_token')
-                  setActiveUser(null)
-                }}>Salir</button>
-              </div>
-            ) : <Link className="btn btn-sm btn-outline-light" to="/login">Ingresar</Link>}
-          </div>
-        </div>
-      </div>
-    </nav>
-  )
-}
-
-function Footer() {
-  return (
-    <footer className="bg-dark text-white text-center py-4 mt-auto">
-      <div className="container"><p className="mb-0 small">&copy; 2026 Prostock Inc. Todos los derechos reservados.</p></div>
-    </footer>
-  )
-}
-
-function SiteLayout() {
-  return <div className="site-layout"><Header /><BackendNotice /><Outlet /><Footer /></div>
-}
-
-function BackendNotice() {
-  const { apiError, apiEnabled } = useStore()
-  if (!apiEnabled || !apiError) return null
-  return <div className="container mt-3"><div className="alert alert-danger mb-0" role="alert">{apiError}</div></div>
 }
 
 function ProductDetailPage() {
@@ -110,12 +43,13 @@ function ProductDetailPage() {
   const [quantity, setQuantity] = useState(1)
   const [imageSelection, setImageSelection] = useState({ productId: id, index: 0 })
   if (!product) return <main className="container my-5 text-center"><h1 className="h3">Producto no encontrado</h1><Link to="/productos" className="btn btn-primary mt-3">Volver al catálogo</Link></main>
-  const images = product.imagenes?.length ? product.imagenes : [product.imagen]
+  const images = (product.imagenes?.length ? product.imagenes : [product.imagen]).filter(Boolean)
+  const normalizedImages = images.length ? images : ['/img/product-placeholder.svg']
   const selectedImage = imageSelection.productId === id ? imageSelection.index : 0
-  const activeImage = Math.min(selectedImage, images.length - 1)
+  const activeImage = Math.min(selectedImage, normalizedImages.length - 1)
   const changeImage = offset => setImageSelection(current => {
     const currentIndex = current.productId === id ? current.index : 0
-    return { productId: id, index: (currentIndex + offset + images.length) % images.length }
+    return { productId: id, index: (currentIndex + offset + normalizedImages.length) % normalizedImages.length }
   })
   const onOffer = isProductOnOffer(product)
   const currentPrice = getOfferPrice(product)
@@ -130,8 +64,8 @@ function ProductDetailPage() {
   return <main className="container my-5"><div className="row bg-white p-4 rounded shadow-sm border">
     <div className="col-md-6 text-center">
       <div className="product-carousel">
-        <img src={images[activeImage]} className="img-fluid product-detail-image" alt={`${product.nombre}, imagen ${activeImage + 1}`} />
-        {images.length > 1 && <div className="d-flex justify-content-between px-3 pb-2">
+        <ProductImage src={normalizedImages[activeImage]} className="img-fluid product-detail-image" alt={`${product.nombre}, imagen ${activeImage + 1}`} />
+        {normalizedImages.length > 1 && <div className="d-flex justify-content-between px-3 pb-2">
           <button type="button" className="btn btn-outline-secondary btn-sm" onClick={() => changeImage(-1)} aria-label="Imagen anterior">
             <i className="bi bi-chevron-left" /> Anterior
           </button>
@@ -140,8 +74,8 @@ function ProductDetailPage() {
           </button>
         </div>}
       </div>
-      {images.length > 1 && <div className="d-flex gap-2 justify-content-center mt-3" aria-label="Seleccionar imagen del producto">
-        {images.map((image, index) => <button
+      {normalizedImages.length > 1 && <div className="d-flex gap-2 justify-content-center mt-3" aria-label="Seleccionar imagen del producto">
+        {normalizedImages.map((image, index) => <button
           key={`${image}-${index}`}
           type="button"
           className={`p-0 rounded border${index === activeImage ? ' border-primary border-2' : ''}`}
@@ -149,7 +83,7 @@ function ProductDetailPage() {
           aria-label={`Mostrar imagen ${index + 1}`}
           aria-pressed={index === activeImage}
         >
-          <img src={image} alt="" className="rounded" style={{ width: 64, height: 64, objectFit: 'cover' }} />
+          <ProductImage src={image} alt="" className="rounded" style={{ width: 64, height: 64, objectFit: 'cover' }} />
         </button>)}
       </div>}
     </div>
@@ -499,7 +433,7 @@ function LoginPage() {
 }
 
 function AuthLayout({ title, children }) {
-  return <><nav className="navbar navbar-dark bg-dark mb-4"><div className="container"><Link className="navbar-brand" to="/"><img src="/img/logo-prostock.svg" className="brand-logo" alt="Prostock" /></Link></div></nav>
+  return <><nav className="navbar navbar-dark bg-dark mb-4"><div className="container"><Link className="navbar-brand" to="/"><BrandLogo className="brand-logo" /></Link></div></nav>
     <main className="container my-5 col-md-8 col-lg-5"><div className="card shadow-sm border-0"><div className="card-body p-4"><h1 className="h3 card-title text-center mb-4">{title}</h1>{children}</div></div></main>
   </>
 }
@@ -660,7 +594,7 @@ function AdminLayout() {
     ['/admin/usuarios', 'Usuarios'],
     ['/admin/mensajes', 'Mensajes'],
   ]
-  return <><nav className="navbar navbar-expand navbar-dark bg-dark"><div className="container-fluid"><Link className="navbar-brand" to="/admin"><img src="/img/logo-prostock.svg" className="brand-logo" alt="Prostock" /> <span className="admin-label">ADMIN</span></Link><Link to="/" className="btn btn-outline-light btn-sm">Volver a la Tienda</Link></div></nav><BackendNotice />
+  return <><nav className="navbar navbar-expand navbar-dark bg-dark"><div className="container-fluid"><Link className="navbar-brand" to="/admin"><BrandLogo className="brand-logo" /> <span className="admin-label">ADMIN</span></Link><Link to="/" className="btn btn-outline-light btn-sm">Volver a la Tienda</Link></div></nav><BackendNotice />
     <div className="container-fluid my-4"><div className="row"><aside className="col-md-3 col-lg-2 mb-3"><div className="list-group shadow-sm">{links.map(([to, label]) => <NavLink key={to} to={to} end={to === '/admin'} className={({ isActive }) => `list-group-item list-group-item-action${isActive || (to !== '/admin' && location.pathname.startsWith(to)) ? ' active' : ''}`}>{label}</NavLink>)}</div></aside><section className="col-md-9 col-lg-10"><Outlet /></section></div></div>
   </>
 }

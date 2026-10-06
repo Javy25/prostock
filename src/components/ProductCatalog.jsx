@@ -1,11 +1,12 @@
 import { useState } from 'react'
 
-export default function ProductCatalog({ products, renderProduct, initialCategory = '' }) {
+export default function ProductCatalog({ products = [], renderProduct, initialCategory = '' }) {
   const [search, setSearch] = useState('')
   const [category, setCategory] = useState(initialCategory)
-  const categories = [...new Set(products.map(product => product.categoria))]
-  const filtered = products.filter(product => {
-    const searchMatches = `${product.codigo} ${product.nombre}`.toLowerCase().includes(search.toLowerCase())
+  const catalogItems = Array.isArray(products) ? products : []
+  const categories = [...new Set(catalogItems.map(product => product.categoria).filter(Boolean))]
+  const filtered = catalogItems.filter(product => {
+    const searchMatches = `${product.codigo || ''} ${product.nombre || ''}`.toLowerCase().includes(search.toLowerCase())
     return searchMatches && (!category || product.categoria === category)
   })
 
