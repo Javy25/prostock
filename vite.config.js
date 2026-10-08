@@ -35,7 +35,7 @@ function routeToReact(request, response, next) {
     return
   }
 
-  const isReactRoute = /^\/(productos|carrito|nosotros|blogs|contacto|login|registro|perfil|producto|admin)(\/|$)/.test(url.pathname)
+  const isReactRoute = /^\/(productos|carrito|nosotros|blogs|contacto|login|registro|perfil|producto|admin|compra|boletas)(\/|$)/.test(url.pathname)
   if (!isReactRoute) return next()
 
   request.url = `/index.html${url.search}`
@@ -56,4 +56,12 @@ function reactPageRoutes() {
 
 export default defineConfig({
   plugins: [react(), reactPageRoutes()],
+  server: {
+    proxy: {
+      '/api': {
+        target: 'http://localhost:8080',
+        changeOrigin: true,
+      },
+    },
+  },
 })

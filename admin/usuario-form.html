@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prostock Admin - Formulario Usuario</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="../css/styles.css">
+</head>
+<body class="bg-light">
+    <nav class="navbar navbar-dark bg-dark mb-4">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="index.html"><img src="../img/logo-prostock.svg" class="brand-logo" alt="Prostock"> <span class="admin-label">ADMIN</span></a>
+        </div>
+    </nav>
+
+    <div class="container col-md-6">
+        <div class="card shadow-sm border-0">
+            <div class="card-body p-4">
+                <h4 class="card-title mb-4">Administrar Usuario</h4>
+                
+                <form id="form-usuario-admin">
+                    <div class="mb-3">
+                        <label class="form-label">Nombre Completo</label>
+                        <input type="text" id="usr-nombre" class="form-control" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Correo Electrónico</label>
+                        <input type="email" id="usr-email" class="form-control" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Contraseña</label>
+                        <input type="password" id="usr-password" class="form-control" minlength="4" maxlength="10" placeholder="Dejar en blanco para mantener la actual">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Confirmar contraseña</label>
+                        <input type="password" id="usr-confirm-password" class="form-control" minlength="4" maxlength="10" placeholder="Repite la contraseña si la modificas">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Rol del Sistema</label>
+                        <select id="usr-rol" class="form-select" required>
+                            <option value="CLIENTE">CLIENTE</option>
+                            <option value="ADMIN">ADMIN</option>
+                        </select>
+                    </div>
+
+                    <div class="d-flex justify-content-between pt-2">
+                        <a href="usuarios-listar.html" class="btn btn-outline-secondary">Cancelar</a>
+                        <button type="submit" class="btn btn-success">Guardar Usuario</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="../js/admin.js"></script>
+</body>
+</html>

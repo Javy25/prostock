@@ -20,6 +20,10 @@ sola corrida. No requiere instalar Chrome ni otro navegador.
 | Repositorio JavaScript | Validación de errores | IDs duplicados y operaciones sobre IDs inexistentes lanzan errores explícitos. |
 | Componente React | Renderizado y props | El texto inicial refleja la propiedad recibida. |
 | Componente React | Estado y evento | El clic incrementa el estado y actualiza el DOM. |
+| Adaptador de API | Productos | Lista, filtra por categoría, consulta por ID y prueba CRUD. |
+| Adaptador de API | Clientes | Prueba CRUD y el contrato de login con `email`/`contrasena`. |
+| Adaptador de API | Carrito | Verifica las rutas por cliente e invitado, cantidades y eliminación. |
+| Adaptador de API | Boletas y blog | Verifica emisión/consulta de boletas y CRUD de publicaciones. |
 
 ## Pruebas backend
 

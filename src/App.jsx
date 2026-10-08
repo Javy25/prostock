@@ -13,7 +13,7 @@ import {
 } from 'react-router-dom'
 import regions from '../data/regiones.json'
 import productsSeed from '../data/productos.json'
-import { apiEnabled, apiRequest } from './api.js'
+import { apiEnabled } from './api.js'
 import { createProduct, deleteProduct, updateProduct } from './data/productRepository.js'
 import { getAvailableCategories } from './data/categoryRepository.js'
 import { addProductQuantityToCart } from './data/cart.js'
@@ -21,7 +21,27 @@ import { getOfferCartProduct, getOfferProducts } from './data/offers.js'
 import { CRITICAL_STOCK_THRESHOLD, getCriticalProducts, getProductReport } from './data/productReports.js'
 import { getGeneralReport } from './data/generalReports.js'
 import { mockDatabase } from './data/mockDatabase.js'
-import { removeCatalogProduct, saveCatalogProduct } from './services/catalogApi.js'
+import { listCatalogProducts, removeCatalogProduct, saveCatalogProduct } from './services/catalogApi.js'
+import {
+  addCartItem,
+  clearCart as clearRemoteCart,
+  createReceipt,
+  deleteBlogPost,
+  deleteCustomer,
+  getBlogPost,
+  getCart,
+  getCustomer,
+  getProduct,
+  getReceipt,
+  listBlogPosts,
+  listCustomers,
+  listReceipts,
+  loginCustomer,
+  removeCartItem,
+  saveBlogPost,
+  saveCustomer,
+  updateCartItem,
+} from './services/prostockApi.js'
 import BrandLogo from './components/BrandLogo.jsx'
 import ProductImage from './components/ProductImage.jsx'
 
@@ -46,21 +66,21 @@ const readStored = (key, fallback) => {
   return JSON.parse(stored)
 }
 
-function useStoredValue(key, fallback, normalize = identity) {
+function useStoredValue(key, fallback, normalize = identity, persist = true) {
   const [value, setValue] = useState(() => {
-    const stored = readStored(key, fallback)
+    const stored = persist ? readStored(key, fallback) : fallback
     const normalized = normalize(stored)
-    if (normalized !== stored) localStorage.setItem(key, JSON.stringify(normalized))
+    if (persist && normalized !== stored) localStorage.setItem(key, JSON.stringify(normalized))
     return normalized
   })
   const update = useCallback(nextValue => {
     setValue(current => {
       const next = typeof nextValue === 'function' ? nextValue(current) : nextValue
       const normalized = normalize(next)
-      localStorage.setItem(key, JSON.stringify(normalized))
+      if (persist) localStorage.setItem(key, JSON.stringify(normalized))
       return normalized
     })
-  }, [key, normalize])
+  }, [key, normalize, persist])
   return [value, update]
 }
 
@@ -72,57 +92,102 @@ function normalizeCategories(categories) {
 }
 
 function StoreProvider({ children }) {
-  const [products, setProducts] = useStoredValue('productos_db', productsSeed)
-  const [categories, setCategories] = useStoredValue('categorias_db', mockDatabase.categories.list(), normalizeCategories)
-  const [offers, setOffers] = useStoredValue('ofertas_db', mockDatabase.offers.list())
-  const [cart, setCart] = useStoredValue('carrito', [])
-  const [users, setUsers] = useStoredValue('usuarios_db', [
+  const [products, setProducts] = useStoredValue('productos_db', apiEnabled ? [] : productsSeed, identity, !apiEnabled)
+  const [categories, setCategories] = useStoredValue('categorias_db', apiEnabled ? [] : mockDatabase.categories.list(), normalizeCategories, !apiEnabled)
+  const [offers, setOffers] = useStoredValue('ofertas_db', apiEnabled ? [] : mockDatabase.offers.list(), identity, !apiEnabled)
+  const [cart, setCart] = useStoredValue('carrito', [], identity, !apiEnabled)
+  const [users, setUsers] = useStoredValue('usuarios_db', apiEnabled ? [] : [
     { id: 999, nombre: 'Administrador Prostock', email: 'admin@duoc.cl', password: 'admin123', rol: 'ADMIN' },
-  ])
-  const [orders, setOrders] = useStoredValue('pedidos_db', [])
-  const [messages, setMessages] = useStoredValue('mensajes_contacto_db', [])
-  const [activeUser, setActiveUser] = useStoredValue('usuarioActivo', null)
+  ], identity, !apiEnabled)
+  const [orders, setOrders] = useStoredValue('pedidos_db', [], identity, !apiEnabled)
+  const [messages, setMessages] = useStoredValue('mensajes_contacto_db', [], identity, !apiEnabled)
+  const [posts, setPosts] = useStoredValue('blogs_db', apiEnabled ? [] : blogSeed, identity, !apiEnabled)
+  const [activeUser, setActiveUser] = useStoredValue(apiEnabled ? 'prostock_cliente_sesion' : 'usuarioActivo', null)
   const [apiError, setApiError] = useState('')
   const [backendReady, setBackendReady] = useState(!apiEnabled)
 
   const refreshBackend = useCallback(async (user = activeUser) => {
-    const remoteProducts = await apiRequest('/api/products')
-    setProducts(remoteProducts)
-    if (!user) return
-    const [remoteUsers, remoteOrders, remoteMessages] = await Promise.all([
-      user.rol === 'ADMIN' ? apiRequest('/api/users') : Promise.resolve(users),
-      apiRequest(user.rol === 'ADMIN' ? '/api/orders' : `/api/orders?usuarioId=${user.id}`),
-      user.rol === 'ADMIN' ? apiRequest('/api/messages') : Promise.resolve(messages),
+    const [remoteProducts, remotePosts] = await Promise.all([
+      listCatalogProducts(),
+      listBlogPosts(),
     ])
-    if (user.rol === 'ADMIN') setUsers(remoteUsers)
-    setOrders(remoteOrders.map(order => ({
-      ...order,
-      fecha: order.createdAt ? new Date(order.createdAt).toLocaleDateString('es-CL') : '',
-    })))
-    if (user.rol === 'ADMIN') setMessages(remoteMessages.map(message => ({
-      ...message,
-      fecha: message.fecha ? new Date(message.fecha).toLocaleDateString('es-CL') : '',
-    })))
+    setProducts(remoteProducts)
+    setPosts(remotePosts)
+    const remoteCart = await getCart(user?.id)
+    setCart(remoteCart)
+    if (user) {
+      const [remoteReceipts, remoteUsers] = await Promise.all([
+        listReceipts(user.id),
+        user.rol === 'ADMIN' ? listCustomers() : Promise.resolve(users),
+      ])
+      setOrders(remoteReceipts)
+      if (user.rol === 'ADMIN') setUsers(remoteUsers)
+    } else {
+      setOrders([])
+    }
     setApiError('')
-  }, [activeUser, users, messages, setProducts, setUsers, setOrders, setMessages])
+  }, [activeUser, users, setProducts, setCart, setUsers, setOrders, setPosts])
+
+  const reloadCart = useCallback(async (user = activeUser) => {
+    const remoteCart = await getCart(user?.id)
+    setCart(remoteCart)
+    return remoteCart
+  }, [activeUser, setCart])
+
+  const addCartProduct = useCallback(async (product, quantity) => {
+    if (apiEnabled) {
+      await addCartItem(activeUser?.id, product.id, quantity)
+      return reloadCart()
+    }
+    setCart(current => addProductQuantityToCart(current, product, quantity) || current)
+    return null
+  }, [activeUser, reloadCart, setCart])
+
+  const changeCartProductQuantity = useCallback(async (productId, quantity) => {
+    if (apiEnabled) {
+      if (quantity <= 0) await removeCartItem(activeUser?.id, productId)
+      else await updateCartItem(activeUser?.id, productId, quantity)
+      return reloadCart()
+    }
+    setCart(current => current.flatMap(item => item.id === productId
+      ? (quantity > 0 ? [{ ...item, cantidad: quantity }] : [])
+      : [item]))
+    return null
+  }, [activeUser, reloadCart, setCart])
+
+  const removeCartProduct = useCallback(async productId => {
+    if (apiEnabled) {
+      await removeCartItem(activeUser?.id, productId)
+      return reloadCart()
+    }
+    setCart(current => current.filter(item => item.id !== productId))
+    return null
+  }, [activeUser, reloadCart, setCart])
+
+  const emptyCart = useCallback(async () => {
+    if (apiEnabled) {
+      await clearRemoteCart(activeUser?.id)
+      return reloadCart()
+    }
+    setCart([])
+    return null
+  }, [activeUser, reloadCart, setCart])
 
   useEffect(() => {
     if (!apiEnabled) return
-    if (!localStorage.getItem('prostock_access_token')) setActiveUser(null)
     let active = true
-    apiRequest('/api/products')
-      .then(remoteProducts => {
-        if (active) setProducts(remoteProducts)
-      })
+    Promise.resolve()
+      .then(() => refreshBackend())
       .catch(error => {
-        console.error('No fue posible cargar datos desde los microservicios.', error)
-        if (active) setApiError(`No fue posible conectar con el backend: ${error.message}`)
+        if (!active) return
+        console.error('No fue posible cargar datos desde el microservicio.', error)
+        setApiError(`No fue posible conectar con el backend: ${error.message}`)
       })
       .finally(() => {
         if (active) setBackendReady(true)
       })
     return () => { active = false }
-  }, [setActiveUser, setProducts])
+  }, [refreshBackend])
 
   useEffect(() => {
     if (!apiEnabled && !users.some(user => user.email === 'admin@duoc.cl')) {
@@ -136,9 +201,10 @@ function StoreProvider({ children }) {
   }, [users, setUsers])
   const value = useMemo(() => ({
     products, setProducts, categories, setCategories, offers, setOffers, cart, setCart, users, setUsers, orders, setOrders,
-    messages, setMessages, activeUser, setActiveUser, apiEnabled, apiError,
-    setApiError, backendReady, refreshBackend,
-  }), [products, setProducts, categories, setCategories, offers, setOffers, cart, setCart, users, setUsers, orders, setOrders, messages, setMessages, activeUser, setActiveUser, apiError, setApiError, backendReady, refreshBackend])
+    messages, setMessages, posts, setPosts, activeUser, setActiveUser, apiEnabled, apiError,
+    setApiError, backendReady, refreshBackend, reloadCart, addCartProduct,
+    changeCartProductQuantity, removeCartProduct, emptyCart,
+  }), [products, setProducts, categories, setCategories, offers, setOffers, cart, setCart, users, setUsers, orders, setOrders, messages, setMessages, posts, setPosts, activeUser, setActiveUser, apiError, setApiError, backendReady, refreshBackend, reloadCart, addCartProduct, changeCartProductQuantity, removeCartProduct, emptyCart])
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>
 }
@@ -150,7 +216,17 @@ function useStore() {
 }
 
 function Header() {
-  const { cart, activeUser, setActiveUser } = useStore()
+  const { cart, activeUser, setActiveUser, refreshBackend, setApiError, apiEnabled } = useStore()
+  const logout = async () => {
+    setActiveUser(null)
+    if (apiEnabled) {
+      try {
+        await refreshBackend(null)
+      } catch (error) {
+        setApiError(`No se pudo cargar el carrito de invitado: ${error.message}`)
+      }
+    }
+  }
   const count = cart.reduce((total, item) => total + item.cantidad, 0)
   const links = [
     ['/', 'Inicio'],
@@ -187,10 +263,7 @@ function Header() {
             {activeUser ? (
               <div className="text-white small d-flex align-items-center gap-2">
                 <Link className="text-white text-decoration-none" to="/perfil">{activeUser.nombre}</Link>
-                <button className="btn btn-sm btn-outline-light" onClick={() => {
-                  localStorage.removeItem('prostock_access_token')
-                  setActiveUser(null)
-                }}>Salir</button>
+                <button className="btn btn-sm btn-outline-light" onClick={logout}>Salir</button>
               </div>
             ) : <Link className="btn btn-sm btn-outline-light" to="/login">Ingresar</Link>}
           </div>
@@ -241,7 +314,7 @@ function ProductCard({ product }) {
           <img src={product.imagen} className="card-img-top" alt={product.nombre} style={{ height: 180, objectFit: 'cover' }} />
         </Link>
         <div className="card-body d-flex flex-column">
-          <small className="text-muted fw-bold">CÓD: {product.codigo}</small>
+          <small className="text-muted fw-bold">ID: {product.id}</small>
           <h2 className="h6 fw-bold mt-2"><Link className="text-decoration-none text-dark" to={`/producto/${product.id}`}>{product.nombre}</Link></h2>
           <span className="text-muted small">{product.categoria}</span>
           <strong className="text-primary mt-2">{money(withTax(product.precio))} IVA incl.</strong>
@@ -298,25 +371,49 @@ function HomePage() {
 }
 
 function ProductsPage() {
-  const { products } = useStore()
+  const { products, apiEnabled } = useStore()
+  const location = useLocation()
+  const navigate = useNavigate()
   const [search, setSearch] = useState('')
-  const [category, setCategory] = useState('')
+  const category = new URLSearchParams(location.search).get('categoria') || ''
+  const [categoryResult, setCategoryResult] = useState({ category: '', products: [] })
+  const [categoryError, setCategoryError] = useState({ category: '', message: '' })
   const categories = [...new Set(products.map(product => product.categoria))]
-  const filtered = products.filter(product => {
-    const searchMatches = `${product.codigo} ${product.nombre}`.toLowerCase().includes(search.toLowerCase())
+  const productsToFilter = apiEnabled && category
+    ? (categoryResult.category === category ? categoryResult.products : [])
+    : products
+  const filtered = productsToFilter.filter(product => {
+    const searchMatches = `${product.id} ${product.codigo} ${product.nombre}`.toLowerCase().includes(search.toLowerCase())
     return searchMatches && (!category || product.categoria === category)
   })
+  useEffect(() => {
+    if (!apiEnabled || !category) return
+    let active = true
+    listCatalogProducts()
+      .then(result => {
+        if (active) setCategoryResult({
+          category,
+          products: result.filter(product => product.categoria === category),
+        })
+      })
+      .catch(error => {
+        if (active) setCategoryError({ category, message: error.message })
+      })
+    return () => { active = false }
+  }, [apiEnabled, category])
+  const currentCategoryError = categoryError.category === category ? categoryError.message : ''
   return (
     <main className="container my-5">
       <div className="row align-items-center mb-4">
         <div className="col-md-6"><h1 className="h2">Catálogo de Productos</h1></div>
         <div className="col-md-6"><div className="d-flex gap-2">
           <input className="form-control" value={search} onChange={event => setSearch(event.target.value)} placeholder="Buscar por código o nombre..." aria-label="Buscar productos" />
-          <select className="form-select" value={category} onChange={event => setCategory(event.target.value)} aria-label="Filtrar productos por categoría">
+          <select className="form-select" value={category} onChange={event => navigate(event.target.value ? `/productos?categoria=${encodeURIComponent(event.target.value)}` : '/productos')} aria-label="Filtrar productos por categoría">
             <option value="">Todas las categorías</option>{categories.map(item => <option key={item}>{item}</option>)}
           </select>
         </div></div>
       </div>
+      {currentCategoryError && <div className="alert alert-danger" role="alert">No se pudieron cargar los productos de esta categoría: {currentCategoryError}</div>}
       <div className="row">{filtered.length ? filtered.map(product => <ProductCard key={product.id} product={product} />) : <p className="col-12 text-center py-5 text-muted">No hay productos disponibles.</p>}</div>
     </main>
   )
@@ -357,11 +454,30 @@ function OffersPage() {
 
 function ProductDetailPage() {
   const { id } = useParams()
-  const { products, cart, setCart, offers, apiEnabled, backendReady, apiError } = useStore()
-  const product = products.find(item => String(item.id) === id)
+  const { products, cart, apiEnabled, backendReady, apiError, addCartProduct } = useStore()
+  const [productResult, setProductResult] = useState({ id: '', product: null, error: '' })
   const [quantity, setQuantity] = useState(1)
   const [imageSelection, setImageSelection] = useState({ productId: id, index: 0 })
-  if (!product) return <main className="container my-5 text-center"><h1 className="h3">Producto no encontrado</h1><Link to="/productos" className="btn btn-primary mt-3">Volver al catálogo</Link></main>
+  useEffect(() => {
+    if (!apiEnabled) return
+    let active = true
+    getProduct(id)
+      .then(result => {
+        if (active) setProductResult({ id, product: result, error: '' })
+      })
+      .catch(error => {
+        if (active) setProductResult({ id, product: null, error: error.message })
+      })
+    return () => { active = false }
+  }, [apiEnabled, id])
+  const product = apiEnabled
+    ? (productResult.id === id ? productResult.product : null)
+    : products.find(item => String(item.id) === id)
+  const loadError = apiEnabled && productResult.id === id ? productResult.error : ''
+  if (apiEnabled && (!backendReady || productResult.id !== id) && !product && !loadError) {
+    return <main className="container my-5 text-center" role="status">Cargando producto...</main>
+  }
+  if (!product) return <main className="container my-5 text-center"><h1 className="h3">{loadError ? 'No se pudo cargar el producto' : 'Producto no encontrado'}</h1>{loadError && <p role="alert">{loadError}</p>}<Link to="/productos" className="btn btn-primary mt-3">Volver al catálogo</Link></main>
   const images = product.imagenes?.length ? product.imagenes : [product.imagen]
   const normalizedImages = images.map(image => image || '/img/product-placeholder.svg')
   const activeImage = imageSelection.productId === id
@@ -371,13 +487,17 @@ function ProductDetailPage() {
     productId: id,
     index: (activeImage + direction + normalizedImages.length) % normalizedImages.length,
   })
-  const addToCart = () => {
+  const addToCart = async () => {
     const cartProduct = getOfferCartProduct(product)
-    if (!addProductQuantityToCart(cart, cartProduct, quantity)) {
+    if (!apiEnabled && !addProductQuantityToCart(cart, cartProduct, quantity)) {
       window.alert(`Solo hay ${product.stock} unidades disponibles.`)
       return
     }
-    setCart(current => addProductQuantityToCart(current, cartProduct, quantity) || current)
+    try {
+      await addCartProduct(cartProduct, quantity)
+    } catch (error) {
+      window.alert(`No se pudo actualizar el carrito: ${error.message}`)
+    }
   }
   return <main className="container my-5"><div className="row bg-white p-4 rounded shadow-sm border">
     <div className="col-md-6 text-center">
@@ -407,7 +527,7 @@ function ProductDetailPage() {
     </div>
     <div className="col-md-6 d-flex flex-column justify-content-center">
       <span className="badge bg-secondary mb-2 align-self-start">{product.categoria}</span>
-      <h1 className="h2">{product.nombre}</h1><p className="text-muted">SKU / Código: <strong>{product.codigo}</strong></p>
+      <h1 className="h2">{product.nombre}</h1><p className="text-muted">ID: <strong>{product.id}</strong></p>
       <h2 className="text-primary fw-bold my-3">{money(withTax(product.precio))}</h2>
       <p className="text-muted small">Precio con IVA incluido</p><p>Stock disponible: <strong>{product.stock} unidades</strong></p>
       <div className="d-flex gap-2 mt-3">
@@ -420,9 +540,16 @@ function ProductDetailPage() {
 }
 
 function CartPage() {
-  const { cart, setCart, products, setProducts, activeUser, orders, setOrders, apiEnabled, apiRequest, refreshBackend, setApiError } = useStore()
+  const {
+    cart, setCart, products, setProducts, activeUser, orders, setOrders, apiEnabled,
+    backendReady, apiError, changeCartProductQuantity, removeCartProduct, emptyCart,
+    setApiError,
+  } = useStore()
+  const navigate = useNavigate()
   const [checkout, setCheckout] = useState(false)
   const [notice, setNotice] = useState('')
+  const [deliveryMethod, setDeliveryMethod] = useState('Despacho estándar')
+  const [paymentMethod, setPaymentMethod] = useState('tarjeta')
   const [shipping, setShipping] = useState(() => ({
     nombre: activeUser?.nombre || '', telefono: activeUser?.telefono || '',
     direccion: activeUser?.direccion || '', comuna: activeUser?.comuna || '',
@@ -430,16 +557,35 @@ function CartPage() {
   }))
   const total = cart.reduce((sum, item) => sum + withTax(item.precio) * item.cantidad, 0)
   const subtotal = Math.round(total / 1.19)
-  const setQuantity = (id, change) => setCart(current => current.flatMap(item => {
-    if (item.id !== id) return [item]
+  const setQuantity = async (id, change) => {
+    const item = cart.find(entry => entry.id === id)
+    if (!item) return
     const next = item.cantidad + change
     const product = products.find(entry => entry.id === id)
     if (next > (product?.stock || 0)) {
       window.alert(`Solo hay ${product?.stock || 0} unidades disponibles.`)
-      return [item]
+      return
     }
-    return next > 0 ? [{ ...item, cantidad: next }] : []
-  }))
+    try {
+      await changeCartProductQuantity(id, next)
+    } catch (error) {
+      setNotice(`No se pudo actualizar el carrito: ${error.message}`)
+    }
+  }
+  const removeItem = async id => {
+    try {
+      await removeCartProduct(id)
+    } catch (error) {
+      setNotice(`No se pudo quitar el producto: ${error.message}`)
+    }
+  }
+  const clearShoppingCart = async () => {
+    try {
+      await emptyCart()
+    } catch (error) {
+      setNotice(`No se pudo vaciar el carrito: ${error.message}`)
+    }
+  }
   const checkoutOrder = async event => {
     event.preventDefault()
     if (apiEnabled && (!backendReady || apiError)) {
@@ -447,7 +593,7 @@ function CartPage() {
       return
     }
     if (!activeUser) {
-      setNotice('Debes iniciar sesión para finalizar tu compra.')
+      navigate('/login', { state: { from: '/carrito', notice: 'Inicia sesión para emitir la boleta.' } })
       return
     }
     const unavailable = cart.find(item => !products.some(product => product.id === item.id && product.stock >= item.cantidad))
@@ -457,37 +603,17 @@ function CartPage() {
     }
     if (apiEnabled) {
       try {
-        const order = await apiRequest('/api/orders', {
-          method: 'POST',
-          body: JSON.stringify({
-            usuarioId: activeUser.id,
-            items: cart.map(item => ({
-              productoId: item.id,
-              codigo: item.codigo,
-              nombre: item.nombre,
-              imagen: item.imagen,
-              cantidad: item.cantidad,
-              precioNeto: item.precio,
-            })),
-            despacho: {
-              ...shipping,
-              observaciones: [shipping.observaciones, `Modalidad: ${deliveryMethod}`].filter(Boolean).join(' | '),
-            },
-          }),
+        const receipt = await createReceipt(activeUser.id, {
+          metodoPago: paymentMethod,
+          direccion: shipping.direccion,
         })
-        setOrders(current => [...current, {
-          ...order,
-          fecha: order.createdAt ? new Date(order.createdAt).toLocaleDateString('es-CL') : formatToday(),
-        }])
+        setOrders(current => [...current, receipt])
         setCart([])
         setCheckout(false)
-        setNotice('¡Pedido confirmado! Puedes revisar el pedido en tu perfil.')
-        refreshBackend(activeUser).catch(error => {
-          setApiError(`El pedido se confirmó, pero no se pudo actualizar la vista: ${error.message}`)
-        })
-        navigate(`/compra/resultado?estado=exito&pedido=${order.id}`)
+        emptyCart().catch(error => setApiError(`La boleta se emitió, pero no se pudo limpiar el carrito: ${error.message}`))
+        navigate('/compra/resultado', { state: { receipt } })
       } catch (error) {
-        setNotice(`No se pudo confirmar el pedido: ${error.message}`)
+        navigate('/compra/fallo', { state: { message: error.message } })
       }
       return
     }
@@ -504,7 +630,7 @@ function CartPage() {
     setOrders([...orders, order])
     setCart([])
     setCheckout(false)
-    setNotice('¡Pedido confirmado! Puedes revisar el pedido en tu perfil.')
+    navigate('/compra/resultado', { state: { receipt: order } })
   }
   return <main className="container my-5">
     <h1 className="h2 mb-4"><i className="bi bi-cart3" /> Carrito de Compras</h1>
@@ -518,10 +644,10 @@ function CartPage() {
               <button className="btn btn-outline-secondary" onClick={() => setQuantity(item.id, -1)} aria-label="Restar una unidad">-</button><span className="form-control text-center">{item.cantidad}</span>
               <button className="btn btn-outline-secondary" onClick={() => setQuantity(item.id, 1)} aria-label="Agregar una unidad">+</button></div></td>
             <td className="fw-bold">{money(withTax(item.precio) * item.cantidad)}</td>
-            <td><button className="btn btn-sm btn-outline-danger" onClick={() => setCart(cart.filter(entry => entry.id !== item.id))} aria-label={`Eliminar ${item.nombre}`}><i className="bi bi-trash" /></button></td>
+            <td><button className="btn btn-sm btn-outline-danger" onClick={() => removeItem(item.id)} aria-label={`Eliminar ${item.nombre}`}><i className="bi bi-trash" /></button></td>
           </tr>) : <tr><td colSpan="5" className="text-center py-4 text-muted">El carrito está vacío. <Link to="/productos">Ver productos</Link></td></tr>}</tbody>
         </table></div>
-        {cart.length > 0 && <button className="btn btn-outline-secondary btn-sm mt-3" onClick={() => window.confirm('¿Deseas vaciar todo el carrito?') && setCart([])}><i className="bi bi-trash" /> Vaciar Carrito</button>}
+        {cart.length > 0 && <button className="btn btn-outline-secondary btn-sm mt-3" onClick={() => window.confirm('¿Deseas vaciar todo el carrito?') && clearShoppingCart()}><i className="bi bi-trash" /> Vaciar Carrito</button>}
       </div>
       <div className="col-lg-4"><div className="card shadow-sm border-0"><div className="card-body">
         <h2 className="h5 fw-bold border-bottom pb-2">Resumen de Orden</h2>
@@ -531,7 +657,7 @@ function CartPage() {
         <button className="btn btn-success w-100 py-2 fw-bold" disabled={!cart.length || (apiEnabled && (!backendReady || Boolean(apiError)))} onClick={() => {
           if (!activeUser) {
             setNotice('Debes iniciar sesión para finalizar tu compra.')
-            navigate('/login')
+            navigate('/login', { state: { from: '/carrito', notice: 'Inicia sesión para finalizar tu compra.' } })
           } else setCheckout(!checkout)
         }}>Pagar Pedido</button>
         <Link to="/productos" className="btn btn-link w-100 mt-2 text-decoration-none">Seguir comprando</Link>
@@ -542,6 +668,11 @@ function CartPage() {
         <div className="col-12"><label className="form-label" htmlFor="delivery-method">Modalidad de entrega</label>
           <select id="delivery-method" className="form-select" value={deliveryMethod} onChange={event => setDeliveryMethod(event.target.value)} required>
             <option>Despacho estándar</option><option>Despacho programado</option>
+          </select>
+        </div>
+        <div className="col-12"><label className="form-label" htmlFor="payment-method">Método de pago</label>
+          <select id="payment-method" className="form-select" value={paymentMethod} onChange={event => setPaymentMethod(event.target.value)} required>
+            <option value="tarjeta">Tarjeta</option><option value="transferencia">Transferencia</option><option value="efectivo">Efectivo</option>
           </select>
         </div>
         {['nombre', 'telefono', 'direccion', 'comuna', 'region'].map(field => <div className="col-md-6" key={field}>
@@ -557,7 +688,7 @@ function CartPage() {
 
 function CheckoutResultPage({ success }) {
   const { state } = useLocation()
-  const order = state?.order
+  const order = state?.receipt
   if (!success) return <main className="container my-5">
     <div className="alert alert-danger" role="alert"><h1 className="h3">No se pudo completar la compra</h1><p className="mb-0">{state?.message || 'Vuelve al carrito para intentar confirmar el pedido nuevamente.'}</p></div>
     <Link className="btn btn-primary" to="/carrito">Volver al carrito</Link>
@@ -567,10 +698,10 @@ function CheckoutResultPage({ success }) {
     <Link className="btn btn-primary" to="/perfil">Ver mi perfil</Link>
   </main>
   return <main className="container my-5">
-    <div className="alert alert-success" role="status"><h1 className="h3">¡Compra exitosa!</h1><p className="mb-0">Tu pedido #{order.id} fue confirmado.</p></div>
+    <div className="alert alert-success" role="status"><h1 className="h3">¡Compra exitosa!</h1><p className="mb-0">Tu boleta #{order.id} fue emitida.</p></div>
     <section className="card shadow-sm border-0">
       <div className="card-body"><h2 className="h5">Resumen de compra</h2>
-        <p className="mb-2">Fecha: {order.fecha || formatToday()}</p>
+        <p className="mb-2">Fecha: {order.fecha ? new Date(order.fecha).toLocaleDateString('es-CL') : formatToday()}</p>
         <p className="mb-3">Estado: {order.estado}</p>
         <ul className="list-group list-group-flush mb-3">{order.items?.map((item, index) =>
           <li className="list-group-item d-flex justify-content-between" key={item.id || item.productoId || index}>
@@ -584,7 +715,7 @@ function CheckoutResultPage({ success }) {
   </main>
 }
 
-const blogPosts = [
+const blogSeed = [
   { slug: 'inventario', title: '5 Tips para Organizar el Inventario de tu Oficina', category: 'Consejos', date: '12 de Mayo, 2026', image: 'https://images.unsplash.com/photo-1497215728101-856f4ea42174?w=900&q=80', summary: 'Un inventario ordenado reduce quiebres de stock, compras urgentes y pérdidas de materiales. Estas prácticas permiten mantener el control sin complejidad.', sections: [
     ['1. Clasifica los insumos', 'Ordena los productos según su frecuencia de uso y define responsables para los artículos críticos.'],
     ['2. Registra entradas y salidas', 'Actualiza el inventario cada vez que recibas o entregues materiales. El registro oportuno evita diferencias con el stock físico.'],
@@ -601,29 +732,136 @@ const blogPosts = [
 ]
 
 function BlogPage() {
+  const { posts, apiEnabled } = useStore()
+  const visiblePosts = apiEnabled ? posts : blogSeed
   return <main className="container my-5"><header className="text-center mb-5"><h1 className="fw-bold display-5">Blog</h1><p className="text-muted">Consejos para gestionar mejor los insumos de tu oficina.</p></header>
-    <section className="row justify-content-center g-4">{blogPosts.map((post, index) => <article className="col-md-8 col-lg-7 blog-item" key={post.slug}>
-      <div className="card blog-card h-100 border-0 shadow-sm"><img src={post.image.replace('900', '500')} className="card-img-top object-fit-cover" height="200" alt={index === 0 ? 'Oficina organizada con insumos y papelería' : 'Equipo revisando la gestión de una oficina'} />
+    <section className="row justify-content-center g-4">{visiblePosts.map((post, index) => <article className="col-md-8 col-lg-7 blog-item" key={post.id || post.slug}>
+      <div className="card blog-card h-100 border-0 shadow-sm">{post.image && <img src={post.image.replace('900', '500')} className="card-img-top object-fit-cover" height="200" alt={post.title} />}
         <div className="card-body d-flex flex-column"><div className="mb-2"><span className={`badge ${index ? 'bg-success' : 'bg-primary'}`}>{post.category}</span></div>
           <h2 className="card-title h4 fw-bold">{post.title}</h2><p className="card-text text-muted small flex-grow-1">{post.summary}</p>
-          <Link to={`/blogs/${post.slug}`} className="btn btn-primary align-self-start">Leer noticia <i className="bi bi-arrow-right ms-1" /></Link>
+          <Link to={`/blogs/${apiEnabled ? post.id : post.slug}`} className="btn btn-primary align-self-start">Leer noticia <i className="bi bi-arrow-right ms-1" /></Link>
           <div className="d-flex align-items-center gap-2 mt-3 pt-3 border-top text-muted small"><i className="bi bi-calendar3" /><time>{post.date}</time></div>
         </div>
       </div>
-    </article>)}</section>
+    </article>)}{!visiblePosts.length && <p className="text-center text-muted">No hay publicaciones disponibles.</p>}</section>
   </main>
 }
 
 function BlogDetailPage() {
   const { slug } = useParams()
-  const post = blogPosts.find(item => item.slug === slug)
+  const { posts, apiEnabled } = useStore()
+  const [remotePost, setRemotePost] = useState(null)
+  const [error, setError] = useState('')
+  useEffect(() => {
+    if (!apiEnabled) return
+    let active = true
+    getBlogPost(slug)
+      .then(result => {
+        if (active) setRemotePost(result)
+      })
+      .catch(requestError => {
+        if (active) setError(requestError.message)
+      })
+    return () => { active = false }
+  }, [apiEnabled, slug])
+  const post = apiEnabled
+    ? remotePost || posts.find(item => String(item.id) === slug || item.slug === slug)
+    : blogSeed.find(item => item.slug === slug)
   if (!post) return <main className="container my-5"><h1 className="h3">Artículo no encontrado</h1><Link to="/blogs">Volver al blog</Link></main>
+  const sections = post.sections || (post.content ? [[post.title, post.content]] : [])
   return <main className="container my-5 flex-grow-1"><article className="mx-auto" style={{ maxWidth: 850 }}>
     <Link to="/blogs" className="text-decoration-none"><i className="bi bi-arrow-left" /> Volver al blog</Link>
     <h1 className="fw-bold my-3">{post.title}</h1><p className="text-muted"><span className="badge bg-primary me-2">{post.category}</span>{post.date}</p>
-    <img src={post.image} className="img-fluid rounded shadow-sm w-100 mb-4" alt={post.category === 'Consejos' ? 'Oficina organizada con insumos y papelería' : 'Equipo revisando la gestión de una oficina'} />
-    <p>{post.summary}</p>{post.sections.map(([heading, paragraph]) => <section key={heading}><h2 className="h4 mt-4">{heading}</h2><p>{paragraph}</p></section>)}
+    {post.image && <img src={post.image} className="img-fluid rounded shadow-sm w-100 mb-4" alt={post.title} />}
+    <p>{post.summary}</p>{sections.map(([heading, paragraph]) => <section key={heading}><h2 className="h4 mt-4">{heading}</h2><p>{paragraph}</p></section>)}
+    {error && <div className="alert alert-danger" role="alert">{error}</div>}
   </article></main>
+}
+
+function AdminBlogsPage() {
+  const { posts, setPosts, apiEnabled } = useStore()
+  if (!apiEnabled) return <div className="alert alert-info" role="status">La gestión de publicaciones requiere habilitar la conexión con la API.</div>
+  const remove = async id => {
+    if (!window.confirm('¿Seguro de eliminar esta publicación?')) return
+    try {
+      await deleteBlogPost(id)
+      setPosts(current => current.filter(post => String(post.id) !== String(id)))
+    } catch (error) {
+      window.alert(`No se pudo eliminar la publicación: ${error.message}`)
+    }
+  }
+  return <>
+    <div className="d-flex justify-content-between align-items-center mb-3">
+      <h1 className="h3">Gestión del Blog</h1>
+      <Link className="btn btn-primary" to="/admin/blogs/nuevo">Nueva publicación</Link>
+    </div>
+    <div className="card border-0 shadow-sm"><div className="table-responsive"><table className="table table-hover align-middle mb-0">
+      <thead className="table-dark"><tr><th>Título</th><th>Categoría</th><th>Fecha</th><th>Acciones</th></tr></thead>
+      <tbody>{posts.map(post => <tr key={post.id}><td>{post.title}</td><td>{post.category}</td><td>{post.date}</td><td>
+        <Link className="btn btn-sm btn-warning me-1" to={`/admin/blogs/${post.id}`}>Editar</Link>
+        <button className="btn btn-sm btn-danger" onClick={() => remove(post.id)}>Eliminar</button>
+      </td></tr>)}{!posts.length && <tr><td colSpan="4" className="text-center py-4">No hay publicaciones.</td></tr>}</tbody>
+    </table></div></div>
+  </>
+}
+
+function AdminBlogForm() {
+  const { id } = useParams()
+  const { posts, setPosts, apiEnabled } = useStore()
+  const navigate = useNavigate()
+  const current = posts.find(post => String(post.id) === id)
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(Boolean(id && !current))
+  useEffect(() => {
+    if (!apiEnabled || !id || current) return
+    let active = true
+    getBlogPost(id)
+      .then(post => {
+        if (active && post) setPosts(items => [...items, post])
+      })
+      .catch(requestError => {
+        if (active) setError(requestError.message)
+      })
+      .finally(() => {
+        if (active) setLoading(false)
+      })
+    return () => { active = false }
+  }, [apiEnabled, current, id, setPosts])
+  const submit = async event => {
+    event.preventDefault()
+    const form = new FormData(event.currentTarget)
+    const post = {
+      title: String(form.get('title')).trim(),
+      category: String(form.get('category')).trim(),
+      image: String(form.get('image')).trim(),
+      summary: String(form.get('summary')).trim(),
+      content: String(form.get('content')).trim(),
+    }
+    try {
+      const saved = await saveBlogPost(post, current?.id)
+      setPosts(items => current
+        ? items.map(item => String(item.id) === String(current.id) ? saved : item)
+        : [...items, saved])
+      navigate('/admin/blogs')
+    } catch (requestError) {
+      setError(requestError.message)
+    }
+  }
+  if (!apiEnabled) return <div className="alert alert-info" role="status">La gestión de publicaciones requiere habilitar la conexión con la API.</div>
+  if (loading) return <p role="status">Cargando publicación...</p>
+  if (id && !current) return <><h1 className="h3">Publicación no encontrada.</h1><Link to="/admin/blogs">Volver al blog</Link>{error && <p role="alert">{error}</p>}</>
+  return <div className="card border-0 shadow-sm"><div className="card-body p-4">
+    <h1 className="h4">{current ? 'Editar publicación' : 'Nueva publicación'}</h1>
+    {error && <div className="alert alert-danger" role="alert">{error}</div>}
+    <form onSubmit={submit}>
+      <Field name="title" label="Título" defaultValue={current?.title} />
+      <Field name="category" label="Categoría" defaultValue={current?.category} />
+      <Field name="image" label="URL de imagen" required={false} defaultValue={current?.image} />
+      <div className="mb-3"><label className="form-label" htmlFor="blog-summary">Resumen</label><textarea id="blog-summary" name="summary" className="form-control" required defaultValue={current?.summary || ''} /></div>
+      <div className="mb-3"><label className="form-label" htmlFor="blog-content">Contenido</label><textarea id="blog-content" name="content" className="form-control" rows="8" required defaultValue={current?.content || ''} /></div>
+      <div className="d-flex justify-content-between"><Link className="btn btn-outline-secondary" to="/admin/blogs">Cancelar</Link><button className="btn btn-success">Guardar publicación</button></div>
+    </form>
+  </div></div>
 }
 
 function AboutPage() {
@@ -646,7 +884,7 @@ function AboutPage() {
 }
 
 function ContactPage() {
-  const { setMessages, activeUser, apiEnabled, apiRequest, setApiError } = useStore()
+  const { setMessages, activeUser, apiEnabled } = useStore()
   const [notice, setNotice] = useState('')
   const [noticeType, setNoticeType] = useState('success')
   const [preparedEmailUrl, setPreparedEmailUrl] = useState('')
@@ -664,18 +902,17 @@ function ContactPage() {
     const gmailWindow = window.open('about:blank', '_blank')
     if (gmailWindow) gmailWindow.opener = null
     try {
-      const message = apiEnabled
-        ? await apiRequest('/api/messages', { method: 'POST', body: JSON.stringify(request) })
-        : { ...request, id: createId(), fecha: formatToday(), atendido: false }
-      setMessages(current => [...current, message])
+      if (!apiEnabled) {
+        const message = { ...request, id: createId(), fecha: formatToday(), atendido: false }
+        setMessages(current => [...current, message])
+      }
       form.reset()
       if (gmailWindow) gmailWindow.location.href = gmailUrl
-      setNoticeType('success')
+      setNoticeType(apiEnabled ? 'warning' : 'success')
       setPreparedEmailUrl(gmailWindow ? '' : gmailUrl)
       setNotice(apiEnabled
-        ? `El mensaje quedó registrado en el sistema. ${gmailWindow ? 'Gmail se abrió con el correo preparado; debes enviarlo desde allí.' : 'No se pudo abrir Gmail automáticamente.'}`
+        ? `La API conectada no incluye recepción de mensajes. ${gmailWindow ? 'Gmail se abrió con el correo preparado; debes enviarlo desde allí.' : 'Abre el correo preparado para enviar tu consulta.'}`
         : `El mensaje quedó guardado localmente. ${gmailWindow ? 'Gmail se abrió con el correo preparado; debes enviarlo desde allí.' : 'No se pudo abrir Gmail automáticamente.'}`)
-      setApiError('')
     } catch (error) {
       gmailWindow?.close()
       setPreparedEmailUrl('')
@@ -702,7 +939,7 @@ function ContactPage() {
 }
 
 function LoginPage() {
-  const { users, setActiveUser, apiEnabled, apiRequest, refreshBackend, setApiError } = useStore()
+  const { users, setActiveUser, apiEnabled, refreshBackend, setApiError } = useStore()
   const navigate = useNavigate()
   const location = useLocation()
   const [error, setError] = useState('')
@@ -712,12 +949,10 @@ function LoginPage() {
     let user
     try {
       if (apiEnabled) {
-        const auth = await apiRequest('/api/auth/login', {
-          method: 'POST',
-          body: JSON.stringify({ email: form.get('email'), password: form.get('password') }),
-        })
-        localStorage.setItem('prostock_access_token', auth.token)
-        user = auth.user
+        user = await loginCustomer(
+          String(form.get('email')).trim().toLowerCase(),
+          String(form.get('password')),
+        )
       } else {
         user = users.find(item => item.email.toLowerCase() === String(form.get('email')).toLowerCase() && item.password === form.get('password'))
       }
@@ -737,7 +972,7 @@ function LoginPage() {
         setApiError(`No se pudieron cargar los datos del usuario: ${requestError.message}`)
       }
     }
-    navigate(user.rol === 'ADMIN' ? '/admin' : '/')
+    navigate(location.state?.from || (user.rol === 'ADMIN' ? '/admin' : '/'), { replace: true })
   }
   return <AuthLayout title="Iniciar Sesión">
     {location.state?.notice && <div className="alert alert-success" role="status">{location.state.notice}</div>}
@@ -746,7 +981,7 @@ function LoginPage() {
       <div className="mb-3"><label className="form-label" htmlFor="login-password">Contraseña</label><input id="login-password" name="password" type="password" className="form-control" required /></div>
       <button className="btn btn-primary w-100 fw-bold py-2">Ingresar</button>
     </form><div className="text-center mt-3"><small>¿No tienes cuenta? <Link to="/registro">Regístrate aquí</Link></small></div>
-    <p className="form-text mt-3 mb-0">Administrador de demostración: admin@duoc.cl / admin123</p>
+    {!apiEnabled && <p className="form-text mt-3 mb-0">Administrador de demostración: admin@duoc.cl / admin123</p>}
   </AuthLayout>
 }
 
@@ -757,7 +992,7 @@ function AuthLayout({ title, children }) {
 }
 
 function RegisterPage() {
-  const { users, setUsers, apiEnabled, apiRequest } = useStore()
+  const { users, setUsers, apiEnabled } = useStore()
   const [error, setError] = useState('')
   const [region, setRegion] = useState('')
   const navigate = useNavigate()
@@ -766,7 +1001,7 @@ function RegisterPage() {
     const form = new FormData(event.currentTarget)
     const email = String(form.get('email')).trim().toLowerCase()
     const password = String(form.get('password'))
-    if (!['duoc.cl', 'profesor.duoc.cl', 'gmail.com'].some(domain => email.endsWith(`@${domain}`))) {
+    if (!apiEnabled && !['duoc.cl', 'profesor.duoc.cl', 'gmail.com'].some(domain => email.endsWith(`@${domain}`))) {
       setError('Dominios aceptados: @duoc.cl, @profesor.duoc.cl, @gmail.com.')
       return
     }
@@ -786,7 +1021,15 @@ function RegisterPage() {
     }
     if (apiEnabled) {
       try {
-        await apiRequest('/api/auth/register', { method: 'POST', body: JSON.stringify(registration) })
+        await saveCustomer({
+          nombre: registration.nombre,
+          email: registration.email,
+          run: registration.run,
+          region: registration.region,
+          comuna: registration.comuna,
+          direccion: registration.direccion,
+          contrasena: registration.password,
+        })
       } catch (requestError) {
         setError(requestError.message)
         return
@@ -801,12 +1044,12 @@ function RegisterPage() {
     <form onSubmit={submit}>
       <Field name="nombre" label="Nombre Completo" placeholder="Juan Pérez" />
       <Field name="email" label="Correo Electrónico" type="email" placeholder="usuario@duoc.cl / gmail.com" />
-      <div className="form-text mb-3">Dominios aceptados: @duoc.cl, @profesor.duoc.cl, @gmail.com</div>
+      {!apiEnabled && <div className="form-text mb-3">Dominios aceptados: @duoc.cl, @profesor.duoc.cl, @gmail.com</div>}
       <Field name="run" label="RUN" placeholder="12.345.678-9" />
       <div className="row"><div className="col-md-6 mb-3"><label className="form-label" htmlFor="register-region">Región</label><select id="register-region" name="region" className="form-select" required value={region} onChange={event => setRegion(event.target.value)}><option value="">Seleccione una región...</option>{regions.map(item => <option key={item.region} value={item.region}>{item.region}</option>)}</select></div>
         <div className="col-md-6 mb-3"><label className="form-label" htmlFor="register-comuna">Comuna</label><select id="register-comuna" name="comuna" className="form-select" required disabled={!region} defaultValue=""><option value="">Seleccione una comuna...</option>{(regions.find(item => item.region === region)?.comunas || []).map(comuna => <option key={comuna} value={comuna}>{comuna}</option>)}</select></div></div>
       <Field name="direccion" label="Dirección de despacho" />
-      <div className="row"><div className="col-md-6"><Field name="password" label="Contraseña" type="password" minLength={4} maxLength={10} /></div><div className="col-md-6"><Field name="confirmPassword" label="Confirmar Contraseña" type="password" /></div></div>
+      <div className="row"><div className="col-md-6"><Field name="password" label="Contraseña" type="password" minLength={apiEnabled ? undefined : 4} maxLength={apiEnabled ? undefined : 10} /></div><div className="col-md-6"><Field name="confirmPassword" label="Confirmar Contraseña" type="password" /></div></div>
       <button className="btn btn-success w-100 fw-bold py-2 mt-3">Registrarse</button>
     </form><div className="text-center mt-3"><small>¿Ya tienes cuenta? <Link to="/login">Inicia sesión</Link></small></div>
   </AuthLayout>
@@ -819,7 +1062,9 @@ export function Field({ name, label, type = 'text', placeholder, minLength, maxL
 function ProfilePage() {
   const { activeUser, orders } = useStore()
   if (!activeUser) return <main className="container my-5 text-center"><h1 className="h3">Inicia sesión para ver tu perfil.</h1><Link className="btn btn-primary mt-3" to="/login">Ingresar</Link></main>
-  const userOrders = orders.filter(order => String(order.usuarioId) === String(activeUser.id))
+  const userOrders = orders
+    .filter(order => String(order.usuarioId ?? activeUser.id) === String(activeUser.id))
+    .sort((left, right) => new Date(right.fecha || 0).getTime() - new Date(left.fecha || 0).getTime())
   const initials = activeUser.nombre.split(/\s+/).filter(Boolean).slice(0, 2).map(part => part[0]).join('').toUpperCase()
   return <main className="container my-5"><h1 className="h2 mb-4">Mi Perfil</h1><div className="card border-0 shadow-sm mb-4"><div className="card-body d-flex align-items-center gap-3">
     <div className="rounded-circle bg-primary text-white fs-3 fw-bold d-flex align-items-center justify-content-center" style={{ width: 72, height: 72 }}>{initials}</div>
@@ -832,14 +1077,56 @@ function ProfilePage() {
         ['Dirección', activeUser.direccion || 'No registrada'],
       ].map(([label, value]) => <div className="col-md-6 mb-2" key={label}><dt>{label}</dt><dd>{value}</dd></div>)}
     </dl></div></div>
-    <h2 className="h4">Mis pedidos</h2><div className="table-responsive card border-0 shadow-sm"><table className="table table-hover mb-0"><thead className="table-light"><tr><th>Pedido</th><th>Fecha</th><th>Total</th><th>Estado</th></tr></thead><tbody>
-      {userOrders.length ? userOrders.map(order => <tr key={order.id}><td><Link to={`/pedidos/${order.id}`}>#{order.id}</Link></td><td>{order.fecha}</td><td>{money(order.total)}</td><td><span className="badge bg-success">{order.estado}</span></td></tr>) : <tr><td colSpan="4" className="text-center text-muted py-4">Aún no tienes compras registradas.</td></tr>}
+    <h2 className="h4">Mis boletas</h2><div className="table-responsive card border-0 shadow-sm"><table className="table table-hover mb-0"><thead className="table-light"><tr><th>Boleta</th><th>Fecha</th><th>Total</th><th>Estado</th></tr></thead><tbody>
+      {userOrders.length ? userOrders.map(order => <tr key={order.id}><td><Link to={`/boletas/${order.id}`}>#{order.id}</Link></td><td>{order.fecha ? new Date(order.fecha).toLocaleDateString('es-CL') : 'No disponible'}</td><td>{money(order.total)}</td><td><span className="badge bg-success">{order.estado}</span></td></tr>) : <tr><td colSpan="4" className="text-center text-muted py-4">Aún no tienes boletas registradas.</td></tr>}
     </tbody></table></div>
   </main>
 }
 
+function ReceiptDetailPage() {
+  const { id } = useParams()
+  const { activeUser, orders, apiEnabled } = useStore()
+  const [remoteReceipt, setRemoteReceipt] = useState(null)
+  const [error, setError] = useState('')
+  useEffect(() => {
+    if (!apiEnabled || !activeUser) return
+    let active = true
+    getReceipt(activeUser.id, id)
+      .then(receipt => {
+        if (active) setRemoteReceipt(receipt)
+      })
+      .catch(requestError => {
+        if (active) setError(requestError.message)
+      })
+    return () => { active = false }
+  }, [activeUser, apiEnabled, id])
+  if (!activeUser) return <main className="container my-5"><h1 className="h3">Inicia sesión para consultar esta boleta.</h1><Link to="/login">Ingresar</Link></main>
+  const receipt = remoteReceipt || orders.find(item => String(item.id) === id)
+  if (!receipt && error) return <main className="container my-5"><div className="alert alert-danger" role="alert">{error}</div><Link to="/perfil">Volver al perfil</Link></main>
+  if (!receipt) return <main className="container my-5" role="status">Cargando boleta...</main>
+  return <main className="container my-5">
+    <div className="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
+      <h1 className="h2 mb-0">Boleta #{receipt.id}</h1>
+      <Link className="btn btn-outline-secondary" to="/perfil">Volver al perfil</Link>
+    </div>
+    <div className="card border-0 shadow-sm"><div className="card-body">
+      <p>Fecha: {receipt.fecha ? new Date(receipt.fecha).toLocaleDateString('es-CL') : 'No disponible'}</p>
+      <p>Método de pago: {receipt.metodoPago || 'No informado'}</p>
+      <p>Dirección: {receipt.direccion || receipt.despacho?.direccion || 'No informada'}</p>
+      <div className="table-responsive"><table className="table"><thead><tr><th>Producto</th><th>Cantidad</th><th>Precio</th><th>Total</th></tr></thead><tbody>
+        {receipt.items.map((item, index) => <tr key={item.productoId || item.id || index}>
+          <td>{item.nombre}</td><td>{item.cantidad}</td><td>{money(item.precio)}</td>
+          <td>{money(item.totalLinea ?? item.precio * item.cantidad)}</td>
+        </tr>)}
+        {!receipt.items.length && <tr><td colSpan="4" className="text-center text-muted">La boleta no incluye detalle de productos.</td></tr>}
+      </tbody></table></div>
+      <p className="text-end fs-5 fw-bold mb-0">Total: {money(receipt.total)}</p>
+    </div></div>
+  </main>
+}
+
 function AdminLayout() {
-  const { activeUser } = useStore()
+  const { activeUser, apiEnabled } = useStore()
   const location = useLocation()
   if (activeUser?.rol !== 'ADMIN') return <main className="container my-5 text-center"><h1 className="h3">Acceso restringido a administradores.</h1><Link className="btn btn-primary mt-3" to="/login">Iniciar sesión como administrador</Link></main>
   const links = [
@@ -851,9 +1138,10 @@ function AdminLayout() {
     ['/admin/reportes', 'Reportes'],
     ['/admin/usuarios', 'Usuarios'],
     ['/admin/mensajes', 'Mensajes'],
+    ['/admin/blogs', 'Blog'],
   ]
   return <><nav className="navbar navbar-expand navbar-dark bg-dark"><div className="container-fluid"><Link className="navbar-brand" to="/admin"><img src="/img/logo-prostock.svg" className="brand-logo" alt="Prostock" /> <span className="admin-label">ADMIN</span></Link><Link to="/" className="btn btn-outline-light btn-sm">Volver a la Tienda</Link></div></nav><BackendNotice />
-    <div className="container-fluid my-4"><div className="row"><aside className="col-md-3 col-lg-2 mb-3"><div className="list-group shadow-sm">{links.map(([to, label]) => <NavLink key={to} to={to} end={to === '/admin'} className={({ isActive }) => `list-group-item list-group-item-action${isActive || (to !== '/admin' && location.pathname.startsWith(to)) ? ' active' : ''}`}>{label}</NavLink>)}</div></aside><section className="col-md-9 col-lg-10"><Outlet /></section></div></div>
+    <div className="container-fluid my-4"><div className="row"><aside className="col-md-3 col-lg-2 mb-3"><div className="list-group shadow-sm">{links.filter(([to]) => to !== '/admin/blogs' || apiEnabled).map(([to, label]) => <NavLink key={to} to={to} end={to === '/admin'} className={({ isActive }) => `list-group-item list-group-item-action${isActive || (to !== '/admin' && location.pathname.startsWith(to)) ? ' active' : ''}`}>{label}</NavLink>)}</div></aside><section className="col-md-9 col-lg-10"><Outlet /></section></div></div>
   </>
 }
 
@@ -865,10 +1153,10 @@ function AdminCriticalProductsPage() {
     <p className="text-muted mb-3">Se consideran críticos los productos con stock igual o inferior a {CRITICAL_STOCK_THRESHOLD} unidades.</p>
     <div className="card border-0 shadow-sm"><div className="table-responsive">
       <table className="table table-hover align-middle mb-0">
-        <thead className="table-dark"><tr><th>Producto</th><th>Código</th><th>Categoría</th><th>Stock actual</th></tr></thead>
+        <thead className="table-dark"><tr><th>Producto</th><th>ID</th><th>Categoría</th><th>Stock actual</th></tr></thead>
         <tbody>
           {criticalProducts.map(product => <tr key={product.id}>
-            <td>{product.nombre}</td><td>{product.codigo || 'No disponible'}</td>
+            <td>{product.nombre}</td><td>{product.id}</td>
             <td>{product.categoria || 'Sin categoría'}</td><td><span className="badge bg-warning text-dark">{product.stock}</span></td>
           </tr>)}
           {!criticalProducts.length && <tr><td colSpan="4" className="text-center text-muted py-4">No hay productos críticos según el umbral de stock actual.</td></tr>}
@@ -879,7 +1167,7 @@ function AdminCriticalProductsPage() {
 }
 
 function AdminProductReportsPage() {
-  const { products, orders } = useStore()
+  const { products, orders, apiEnabled } = useStore()
   const report = getProductReport(products, orders)
   return <>
     <h1 className="h3 mb-3">Reportes de productos</h1>
@@ -900,6 +1188,7 @@ function AdminProductReportsPage() {
     </div></div>
     <h2 className="h5">Ventas por producto registradas en pedidos</h2>
     <p className="text-muted">Los importes se calculan exclusivamente desde las líneas de pedidos existentes.</p>
+    {apiEnabled && <div className="alert alert-info" role="status">La API solo permite consultar boletas por cliente, no proporciona un reporte global de ventas.</div>}
     <div className="card border-0 shadow-sm"><div className="table-responsive">
       <table className="table table-hover align-middle mb-0">
         <thead className="table-dark"><tr><th>Producto</th><th>Unidades vendidas</th><th>Total de líneas</th></tr></thead>
@@ -913,7 +1202,8 @@ function AdminProductReportsPage() {
 }
 
 function AdminOrdersPage() {
-  const { orders, users } = useStore()
+  const { orders, users, apiEnabled } = useStore()
+  if (apiEnabled) return <div className="alert alert-info" role="status">La API permite consultar las boletas del cliente autenticado, pero no incluye un listado administrativo global.</div>
   const sortedOrders = [...orders].sort((a, b) => {
     const dateA = new Date(a.createdAt || a.fecha || 0).getTime()
     const dateB = new Date(b.createdAt || b.fecha || 0).getTime()
@@ -945,9 +1235,10 @@ function AdminOrdersPage() {
 }
 
 function AdminOrderDetailPage() {
+  const { apiEnabled, orders, users } = useStore()
   const { id } = useParams()
-  const { orders, users } = useStore()
   const order = orders.find(item => String(item.id) === id)
+  if (apiEnabled) return <div className="alert alert-info" role="status">Las boletas de este microservicio se consultan desde el perfil del cliente autenticado.</div>
   if (!order) return <><h1 className="h3">Pedido no encontrado.</h1><Link to="/admin/pedidos">Volver a órdenes y boletas</Link></>
   const customer = users.find(user => String(user.id) === String(order.usuarioId))
   return <>
@@ -993,7 +1284,7 @@ function OrderDetails({ order, customer }) {
 }
 
 function AdminDashboard() {
-  const { products, users, orders, messages } = useStore()
+  const { products, users, orders, messages, apiEnabled } = useStore()
   const sales = orders.reduce((sum, order) => sum + Number(order.total || 0), 0)
   const stats = [
     ['Productos Totales', products.length, 'primary', 'box-seam'],
@@ -1002,7 +1293,9 @@ function AdminDashboard() {
     ['Mensajes pendientes', messages.filter(message => !message.atendido).length, 'secondary', 'envelope'],
     ['Ventas totales', money(sales), 'dark', 'cash-stack'],
   ]
-  return <><div className="d-flex justify-content-between align-items-center mb-4"><h1 className="h3 mb-0">Panel de Control</h1><Link to="/admin/productos/nuevo" className="btn btn-primary">+ Nuevo Producto</Link></div><div className="row g-3">
+  return <><div className="d-flex justify-content-between align-items-center mb-4"><h1 className="h3 mb-0">Panel de Control</h1><Link to="/admin/productos/nuevo" className="btn btn-primary">+ Nuevo Producto</Link></div>
+  {apiEnabled && <div className="alert alert-info" role="status">El microservicio no expone métricas globales de boletas ni de mensajes.</div>}
+  <div className="row g-3">
     {stats.map(([label, value, color, icon]) => <div className="col-md-6 col-xl-4" key={label}><div className={`card border-0 shadow-sm bg-${color} ${color === 'info' ? 'text-dark' : 'text-white'} p-3`}><div className="d-flex justify-content-between align-items-center"><div><h2 className="h6 text-uppercase">{label}</h2><p className="h2 mb-0">{value}</p></div><i className={`bi bi-${icon} fs-1`} /></div></div></div>)}
   </div></>
 }
@@ -1020,8 +1313,8 @@ function AdminProductsPage() {
     }
   }
   return <><div className="d-flex justify-content-between align-items-center mb-3"><h1 className="h3 m-0">Gestión de Productos</h1><Link to="/admin/productos/nuevo" className="btn btn-primary"><i className="bi bi-plus-circle me-1" />Nuevo Producto</Link></div>
-    <div className="card border-0 shadow-sm"><div className="table-responsive"><table className="table table-hover align-middle mb-0"><thead className="table-dark"><tr><th>Código</th><th>Nombre</th><th>Categoría</th><th>Precio</th><th>Stock</th><th>Acciones</th></tr></thead><tbody>
-      {sorted.map(product => <tr key={product.id}><td>{product.codigo}</td><td>{product.nombre}</td><td>{product.categoria}</td><td>{money(withTax(product.precio))} <small>IVA incl.</small></td><td>{product.stock}</td><td><Link to={`/admin/productos/${product.id}`} className="btn btn-sm btn-warning me-1" aria-label={`Editar ${product.nombre}`}><i className="bi bi-pencil" /></Link><button className="btn btn-sm btn-danger" onClick={() => remove(product.id)} aria-label={`Eliminar ${product.nombre}`}><i className="bi bi-trash" /></button></td></tr>)}
+    <div className="card border-0 shadow-sm"><div className="table-responsive"><table className="table table-hover align-middle mb-0">    <thead className="table-dark"><tr><th>ID</th><th>Nombre</th><th>Categoría</th><th>Precio</th><th>Stock</th><th>Acciones</th></tr></thead><tbody>
+      {sorted.map(product => <tr key={product.id}><td>{product.id}</td><td>{product.nombre}</td><td>{product.categoria}</td><td>{money(withTax(product.precio))} <small>IVA incl.</small></td><td>{product.stock}</td><td><Link to={`/admin/productos/${product.id}`} className="btn btn-sm btn-warning me-1" aria-label={`Editar ${product.nombre}`}><i className="bi bi-pencil" /></Link><button className="btn btn-sm btn-danger" onClick={() => remove(product.id)} aria-label={`Eliminar ${product.nombre}`}><i className="bi bi-trash" /></button></td></tr>)}
       {!sorted.length && <tr><td colSpan="6" className="text-center py-4">No hay productos.</td></tr>}
     </tbody></table></div></div>
   </>
@@ -1158,7 +1451,8 @@ function AdminOfferForm() {
 }
 
 function AdminReportsPage() {
-  const { products, orders, users, messages, categories } = useStore()
+  const { products, orders, users, messages, categories, apiEnabled } = useStore()
+  if (apiEnabled) return <div className="alert alert-info" role="status">La API no incluye endpoints de reportes administrativos globales.</div>
   const report = getGeneralReport({ products, users, orders, messages, categories })
   const stats = [
     ['Productos', report.productCount, 'primary'],
@@ -1262,15 +1556,15 @@ function AdminProductForm() {
 }
 
 function AdminUsersPage() {
-  const { users, setUsers, activeUser, apiEnabled, apiRequest } = useStore()
+  const { users, setUsers, activeUser, apiEnabled } = useStore()
   const remove = async id => {
-    if (activeUser.id === id) {
+    if (String(activeUser.id) === String(id)) {
       window.alert('No puedes eliminar la cuenta con la que iniciaste sesión.')
       return
     }
     if (!window.confirm('¿Seguro de eliminar este usuario?')) return
     try {
-      if (apiEnabled) await apiRequest(`/api/users/${id}`, { method: 'DELETE' })
+      if (apiEnabled) await deleteCustomer(id)
       setUsers(current => current.filter(user => user.id !== id))
     } catch (error) {
       window.alert(`No se pudo eliminar el usuario: ${error.message}`)
@@ -1318,9 +1612,23 @@ function AdminUserPurchaseHistory() {
 
 function AdminUserForm() {
   const { id } = useParams()
-  const { users, setUsers, activeUser, setActiveUser, apiEnabled, apiRequest } = useStore()
+  const { users, setUsers, activeUser, setActiveUser, apiEnabled } = useStore()
   const navigate = useNavigate()
-  const user = users.find(item => String(item.id) === id)
+  const listedUser = users.find(item => String(item.id) === id)
+  const [customerLookup, setCustomerLookup] = useState({ id: '', user: null, error: '' })
+  useEffect(() => {
+    if (!apiEnabled || !id || listedUser) return
+    let active = true
+    getCustomer(id)
+      .then(customer => {
+        if (active) setCustomerLookup({ id, user: customer, error: '' })
+      })
+      .catch(error => {
+        if (active) setCustomerLookup({ id, user: null, error: error.message })
+      })
+    return () => { active = false }
+  }, [apiEnabled, id, listedUser])
+  const user = listedUser || (customerLookup.id === id ? customerLookup.user : null)
   const [error, setError] = useState('')
   const submit = async event => {
     event.preventDefault()
@@ -1339,7 +1647,7 @@ function AdminUserForm() {
       setError('Las contraseñas no coinciden.')
       return
     }
-    if (!['duoc.cl', 'profesor.duoc.cl', 'gmail.com'].some(domain => email.endsWith(`@${domain}`))) {
+    if (!apiEnabled && !['duoc.cl', 'profesor.duoc.cl', 'gmail.com'].some(domain => email.endsWith(`@${domain}`))) {
       setError('El correo debe ser @duoc.cl, @profesor.duoc.cl o @gmail.com.')
       return
     }
@@ -1350,14 +1658,11 @@ function AdminUserForm() {
     if (password) userPayload.password = password
     if (apiEnabled) {
       try {
-        const saved = await apiRequest(user ? `/api/users/${user.id}` : '/api/users', {
-          method: user ? 'PUT' : 'POST',
-          body: JSON.stringify(userPayload),
-        })
+        const saved = await saveCustomer(userPayload, user?.id)
         setUsers(current => user
           ? current.map(item => item.id === user.id ? saved : item)
           : [...current, saved])
-        if (activeUser.id === saved.id) setActiveUser(saved)
+        if (String(activeUser.id) === String(saved.id)) setActiveUser(saved)
         navigate('/admin/usuarios')
       } catch (requestError) {
         setError(requestError.message)
@@ -1369,11 +1674,12 @@ function AdminUserForm() {
     if (activeUser.id === updatedUser.id) setActiveUser(updatedUser)
     navigate('/admin/usuarios')
   }
-  if (id && !user) return <><h1 className="h3">Usuario no encontrado.</h1><Link to="/admin/usuarios">Volver a usuarios</Link></>
+  if (id && !user && apiEnabled && customerLookup.id !== id) return <p role="status">Buscando cliente...</p>
+  if (id && !user) return <><h1 className="h3">Cliente no encontrado.</h1>{customerLookup.error && <p role="alert">{customerLookup.error}</p>}<Link to="/admin/usuarios">Volver a clientes</Link></>
   return <div className="card shadow-sm border-0"><div className="card-body p-4"><h1 className="h4 mb-4">Administrar Usuario</h1>
     {error && <div className="alert alert-danger" role="alert">{error}</div>}
     <form onSubmit={submit}><Field name="nombre" label="Nombre Completo" defaultValue={user?.nombre} /><Field name="email" label="Correo Electrónico" type="email" defaultValue={user?.email} />
-      <div className="row"><div className="col-md-6"><Field name="password" label="Contraseña" type="password" minLength={4} maxLength={10} required={!user} /></div><div className="col-md-6"><Field name="confirmPassword" label="Confirmar contraseña" type="password" required={!user} /></div></div>
+      <div className="row"><div className="col-md-6"><Field name="password" label="Contraseña" type="password" minLength={apiEnabled ? undefined : 4} maxLength={apiEnabled ? undefined : 10} required={!user} /></div><div className="col-md-6"><Field name="confirmPassword" label="Confirmar contraseña" type="password" required={!user} /></div></div>
       <div className="mb-3"><label className="form-label" htmlFor="user-role">Rol del Sistema</label><select id="user-role" name="rol" className="form-select" defaultValue={user?.rol || 'CLIENTE'}><option value="CLIENTE">CLIENTE</option><option value="ADMIN">ADMIN</option></select></div>
       <div className="d-flex justify-content-between"><Link to="/admin/usuarios" className="btn btn-outline-secondary">Cancelar</Link><button className="btn btn-success">Guardar Usuario</button></div>
     </form>
@@ -1381,16 +1687,12 @@ function AdminUserForm() {
 }
 
 function AdminMessagesPage() {
-  const { messages, setMessages, apiEnabled, apiRequest } = useStore()
+  const { messages, setMessages, apiEnabled } = useStore()
+  if (apiEnabled) return <div className="alert alert-info" role="status">La API del microservicio no incluye administración de mensajes de contacto.</div>
   const changeAttended = async message => {
     const attended = !message.atendido
     try {
-      const updated = apiEnabled
-        ? await apiRequest(`/api/messages/${message.id}/attended`, {
-          method: 'PATCH',
-          body: JSON.stringify({ atendido: attended }),
-        })
-        : { ...message, atendido: attended }
+      const updated = { ...message, atendido: attended }
       setMessages(current => current.map(item => item.id === message.id ? updated : item))
     } catch (error) {
       window.alert(`No se pudo actualizar el mensaje: ${error.message}`)
@@ -1399,7 +1701,6 @@ function AdminMessagesPage() {
   const removeMessage = async id => {
     if (!window.confirm('¿Seguro de eliminar este mensaje?')) return
     try {
-      if (apiEnabled) await apiRequest(`/api/messages/${id}`, { method: 'DELETE' })
       setMessages(current => current.filter(item => item.id !== id))
     } catch (error) {
       window.alert(`No se pudo eliminar el mensaje: ${error.message}`)
@@ -1466,6 +1767,9 @@ export default function App() {
     </Route>
     <Route path="login" element={<LoginPage />} />
     <Route path="registro" element={<RegisterPage />} />
+    <Route path="compra/resultado" element={<CheckoutResultPage success />} />
+    <Route path="compra/fallo" element={<CheckoutResultPage success={false} />} />
+    <Route path="boletas/:id" element={<ReceiptDetailPage />} />
     <Route path="admin" element={<AdminLayout />}>
       <Route index element={<AdminDashboard />} />
       <Route path="pedidos" element={<AdminOrdersPage />} />
@@ -1487,6 +1791,9 @@ export default function App() {
       <Route path="usuarios/:id/compras" element={<AdminUserPurchaseHistory />} />
       <Route path="usuarios/:id" element={<AdminUserForm />} />
       <Route path="mensajes" element={<AdminMessagesPage />} />
+      <Route path="blogs" element={<AdminBlogsPage />} />
+      <Route path="blogs/nuevo" element={<AdminBlogForm />} />
+      <Route path="blogs/:id" element={<AdminBlogForm />} />
     </Route>
     <Route path="*" element={<NotFoundPage />} />
   </Routes></BrowserRouter></StoreProvider>

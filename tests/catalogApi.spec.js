@@ -10,7 +10,7 @@ describe('servicio de catálogo con API simulada', () => {
   it('consulta los productos en el endpoint del catálogo', async () => {
     const result = await listCatalogProducts(request)
 
-    expect(request).toHaveBeenCalledOnceWith('/api/products')
+    expect(request).toHaveBeenCalledOnceWith('/api/productos')
     expect(result[0].nombre).toBe('Cuaderno')
   })
 
@@ -18,7 +18,7 @@ describe('servicio de catálogo con API simulada', () => {
     const product = { codigo: 'PRI-101', nombre: 'Cuaderno' }
     await saveCatalogProduct(product, null, request)
 
-    expect(request).toHaveBeenCalledOnceWith('/api/products', {
+    expect(request).toHaveBeenCalledOnceWith('/api/productos', {
       method: 'POST',
       body: JSON.stringify(product),
     })
@@ -28,7 +28,7 @@ describe('servicio de catálogo con API simulada', () => {
     const product = { codigo: 'PRI-101', nombre: 'Cuaderno actualizado' }
     await saveCatalogProduct(product, 17, request)
 
-    expect(request).toHaveBeenCalledOnceWith('/api/products/17', {
+    expect(request).toHaveBeenCalledOnceWith('/api/productos/17', {
       method: 'PUT',
       body: JSON.stringify(product),
     })
@@ -37,7 +37,7 @@ describe('servicio de catálogo con API simulada', () => {
   it('elimina un producto mediante DELETE', async () => {
     await removeCatalogProduct(17, request)
 
-    expect(request).toHaveBeenCalledOnceWith('/api/products/17', { method: 'DELETE' })
+    expect(request).toHaveBeenCalledOnceWith('/api/productos/17', { method: 'DELETE' })
   })
 
   it('propaga los errores recibidos desde el mock de API', async () => {

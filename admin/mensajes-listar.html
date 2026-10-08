@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prostock Admin - Mensajes</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="../css/styles.css">
+</head>
+<body class="bg-light">
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark"><div class="container-fluid"><a class="navbar-brand" href="index.html"><img src="../img/logo-prostock.svg" class="brand-logo" alt="Prostock"> <span class="admin-label">ADMIN</span></a><a href="../index.html" class="btn btn-outline-light btn-sm">Volver a la Tienda</a></div></nav>
+    <main class="container-fluid my-4"><div class="row"><aside class="col-md-3 col-lg-2 mb-3"><div class="list-group shadow-sm"><a href="index.html" class="list-group-item list-group-item-action">Dashboard</a><a href="productos-listar.html" class="list-group-item list-group-item-action">Productos</a><a href="usuarios-listar.html" class="list-group-item list-group-item-action">Usuarios</a><a href="mensajes-listar.html" class="list-group-item list-group-item-action active">Mensajes</a></div></aside><section class="col-md-9 col-lg-10"><h3 class="mb-3">Mensajes de Contacto</h3><div class="card border-0 shadow-sm"><div class="table-responsive"><table class="table table-hover align-middle mb-0"><thead class="table-dark"><tr><th>Nombre</th><th>Correo</th><th>Asunto</th><th>Mensaje</th><th>Fecha</th><th>Estado</th><th>Acciones</th></tr></thead><tbody id="tabla-admin-mensajes"></tbody></table></div></div></section></div></main>
+    <script src="../js/admin.js"></script>
+</body>
+</html>

@@ -3,9 +3,10 @@
 ## 1. Propósito y alcance
 
 Prostock es una tienda web responsive para la venta de artículos de oficina.
-La versión 2 migra la experiencia a React, permite operar en modo demostración
-con persistencia local y ofrece una arquitectura alternativa de microservicios
-Spring Boot con PostgreSQL.
+La versión 2 migra la experiencia a React y permite operar en modo de
+demostración con persistencia local o conectarse al microservicio de tienda
+HTTP descrito en este documento. En el repositorio también se conserva una
+implementación Spring Boot anterior con un contrato API distinto.
 
 ## 2. Perfiles de usuario
 
@@ -49,22 +50,32 @@ Spring Boot con PostgreSQL.
 
 ## 5. Arquitectura y datos
 
-React/Vite consume el gateway cuando `VITE_USE_API=true`. Los servicios de
-identidad, catálogo, pedidos y contacto mantienen sus propios límites y
-persistencia PostgreSQL. Sin la variable, el modo demostración usa repositorios
-JavaScript con `localStorage`; el seed inicial del catálogo es sólo soporte de
-demostración y no reemplaza la base de datos del backend.
+React/Vite consume el microservicio de tienda cuando `VITE_USE_API=true`, con
+rutas `/api/productos`, `/api/clientes`, `/api/carrito`, `/api/clientes/{id}/boletas`
+y `/api/blogs`. La sesión autenticada y el carrito de invitado se mantienen
+mediante cookies HTTP; la interfaz no envía JWT. Sin la variable, el modo
+demostración usa repositorios JavaScript con `localStorage`; el seed inicial del
+catálogo es sólo soporte de demostración y no reemplaza la base de datos del
+servicio.
+
+El código Spring Boot descrito en `backend/` conserva un contrato anterior
+(rutas en inglés con JWT) y no implementa estos endpoints españoles. No debe
+confundirse con el microservicio que consume el modo API del frontend.
+
+La API de tienda no expone CRUD de categorías/promociones, mensajes de contacto,
+listado global de boletas, reportes administrativos ni una ruta de cierre de
+sesión. En modo API, las categorías se derivan del catálogo y las pantallas
+dependientes de esos endpoints se informan como no disponibles.
 
 El modelo de entidades y relaciones está en [MER.md](./MER.md), y la separación
 de responsabilidades está en [microservices.md](./microservices.md).
 
 ## 6. Restricciones y supuestos
 
-- La API se expone por el gateway en `http://localhost:8080`.
+- En desarrollo, Vite reenvía `/api` a `http://localhost:8080`; en producción se
+  requiere un proxy same-origin o CORS con credenciales habilitadas.
 - El modo local es de demostración y no debe usarse para datos sensibles ni
   operación comercial real.
-- El backend actual no tiene un servicio dedicado a categorías ni promociones;
-  su administración y aplicación de descuentos se limita al modo demostración.
-- Para ejecutar los servicios se requiere Java 17 y Docker Compose; el frontend
-  requiere Node.js y npm.
+- El frontend requiere Node.js y npm. El backend Spring Boot anterior requiere
+  Java 17 y Docker Compose, pero no implementa el contrato de tienda conectado.
 - Los reportes se calculan a partir de los pedidos disponibles en el modo activo.

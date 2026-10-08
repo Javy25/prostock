@@ -1,4 +1,4 @@
-const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8080'
+const baseUrl = import.meta.env.VITE_API_URL || ''
 
 export const apiEnabled = import.meta.env.VITE_USE_API === 'true'
 
@@ -7,11 +7,9 @@ export async function apiRequest(path, options = {}) {
 
   const response = await fetch(`${baseUrl}${path}`, {
     ...options,
+    credentials: 'include',
     headers: {
       ...(options.body ? { 'Content-Type': 'application/json' } : {}),
-      ...(localStorage.getItem('prostock_access_token')
-        ? { Authorization: `Bearer ${localStorage.getItem('prostock_access_token')}` }
-        : {}),
       ...options.headers,
     },
   })
@@ -22,7 +20,7 @@ export async function apiRequest(path, options = {}) {
     if (text) {
       try {
         const body = JSON.parse(text)
-        message = body.detail || body.message || message
+        message = body.detail || body.message || body.mensaje || message
       } catch {
         message = text
       }
@@ -31,5 +29,7 @@ export async function apiRequest(path, options = {}) {
   }
 
   if (response.status === 204) return null
+  const contentType = response.headers.get('content-type') || ''
+  if (!contentType.includes('application/json')) return response.text()
   return response.json()
 }
